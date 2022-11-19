@@ -14,7 +14,6 @@ fn lve(
     let qw = query_word.as_bytes();
 
     for (id, word) in data.iter().enumerate() {
-        let sword = std::str::from_utf8(word).unwrap();
         let mut min = 0usize;
         let wlen = word.len() + 1;
         // let mut begin = 0usize;
