@@ -1,10 +1,8 @@
 benchmark:
   script:
     - mkdir -p build/release
-    - ls -la
     - cargo build --release
-    - ls -la
-    - cp target/release/pgcontent build/release/contest
+    - cp target/release/pgcontest build/release/contest
     - cd build/release
     - /uploader/uploader string-similarity-search ./contest
   tags:
