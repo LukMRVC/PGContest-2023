@@ -27,7 +27,7 @@ fn lve(
                 continue;
             }
         }
-        let mut start_idx = 1;
+        let start_idx = 1;
         for i in 1..wlen {
             // if begin > start_idx {
             //     start_idx = begin;
