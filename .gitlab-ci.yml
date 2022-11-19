@@ -1,0 +1,8 @@
+benchmark:
+  script:
+    - mkdir -p build/release
+    - cd build/release
+    - cargo build --release && cp ../../target/release/pgcontent ./content
+    - /uploader/uploader string-similarity-search ./contest
+  tags:
+    - submission
