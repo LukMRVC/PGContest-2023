@@ -17,47 +17,35 @@ fn lve(
         let sword = std::str::from_utf8(word).unwrap();
         let mut min = 0usize;
         let wlen = word.len() + 1;
-        let mut begin = 0usize;
-        let mut begin_value = 0usize;
-        let mut end = threshold + 1;
-        let mut new_max: bool = false;
+        // let mut begin = 0usize;
+        // let mut begin_value = 0usize;
+        // let mut end = threshold;
+        // let mut new_max: bool = false;
 
+        if threshold == 0 {
+            if word == qw {
+                sum += id + 1;
+                continue;
+            }
+        }
         let mut start_idx = 1;
         for i in 1..wlen {
-            if begin > start_idx {
-                start_idx = begin;
-            }
-            new_max = false;
-            begin_value = m[i * msize + begin];
+            // if begin > start_idx {
+            //     start_idx = begin;
+            // }
+            // new_max = false;
+            // begin_value = m[(i - 1) * msize + begin];
             for j in start_idx..qwlen {
-                let up_left_dist = (i - 1) * msize + (j - 1);
-                // if begin < j && j < end { up right dist vs up left dist }
-                min = std::cmp::min(m[(i - 1) * msize + j], m[up_left_dist]) + 1;
-                if j == start_idx {
-                    // up right
-                    min = m[(i - 1) * msize + j];
-                } else if new_max {
-                    // left of current
-                    min = std::cmp::min(min, m[i + msize + j - 1]);
-                } else if j > end {
-                    // up left and left of current
-                    min = std::cmp::min(m[up_left_dist], m[i + msize + j - 1])
-                }
-
-                if word[i - 1] == qw[j - 1] {
-                    min -= 1;
-                    if min <= begin_value {
-                        begin = j;
-                        begin_value = min;
-                        new_max = true;
-                    }
-                }
-
+                let insertion = m[(i - 1) * msize + j] + 1;
+                let deletion = m[i * msize + (j - 1)] + 1;
+                let substitution =
+                    m[(i - 1) * msize + (j - 1)] + ((word[i - 1] != qw[j - 1]) as usize);
+                min = std::cmp::min(substitution, std::cmp::min(insertion, deletion));
                 m[i * msize + j] = min;
-                if min > threshold {
-                    end = j - 1;
-                    break;
-                }
+            }
+            let rowmin = m[(i * msize)..(i * msize + qwlen)].iter().min().unwrap();
+            if *rowmin > threshold {
+                break;
             }
         }
 
@@ -66,14 +54,14 @@ fn lve(
             sum += id + 1;
         }
 
-        println!("QW: {}\t{} = {}", query_word, sword, min);
-        for i in 0..wlen {
-            for j in 0..qwlen {
-                print!("{} ", m[i * msize + j])
-            }
-            println!(" ")
-        }
-        println!("-------------------------------")
+        // println!("QW: {}\t{} = {}", query_word, sword, min);
+        // for i in 0..wlen {
+        //     for j in 0..qwlen {
+        //         print!("{} ", m[i * msize + j])
+        //     }
+        //     println!(" ")
+        // }
+        // println!("-------------------------------")
     }
 
     return sum;
