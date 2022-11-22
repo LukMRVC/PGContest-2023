@@ -1,15 +1,20 @@
+use std::hash::Hash;
 use std::io::{prelude::*, stdin, stdout, BufReader};
+use std::ptr::swap;
 
 fn ukkonen(s1: &[u8], s2: &[u8], threshold: usize, record_id: usize) -> usize {
-    if s1 == s2 {
-        return record_id;
-    }
-
     let mut s1len = s1.len();
     let mut s2len = s2.len();
 
+    // if cfg!(debug_assertions) {
+    //     print!("S1:{}\tS2:{}",
+    //              std::str::from_utf8(s1).unwrap(),
+    //              std::str::from_utf8(s2).unwrap(),
+    //         )
+    // }
+
     if s1len.abs_diff(s2len) > threshold {
-        return 0;
+        return threshold;
     }
 
     // make sure that |s1| is smaller or equal to s2
@@ -20,7 +25,7 @@ fn ukkonen(s1: &[u8], s2: &[u8], threshold: usize, record_id: usize) -> usize {
     }
 
     if s1len == 0 {
-        return if s2len < threshold { record_id } else { 0 };
+        return std::cmp::min(s2len, threshold); // if s2len < threshold { record_id } else { 0 };
     }
 
     // now prefix trimming
@@ -29,55 +34,61 @@ fn ukkonen(s1: &[u8], s2: &[u8], threshold: usize, record_id: usize) -> usize {
         t_start += 1;
     }
 
+    let s1 = &s1[t_start..s1len];
+    let s2 = &s2[t_start..s2len];
+
     s1len -= t_start;
     s2len -= t_start;
 
     if s1len == 0 {
-        return if s2len < threshold { record_id } else { 0 };
+        return std::cmp::min(s2len, threshold); // if s2len < threshold { record_id } else { 0 };
     }
 
-    let threshold = if s2len < threshold { s2len } else { threshold };
+    let threshold = std::cmp::min(s2len, threshold);
     let diff_len = s2len - s1len;
 
     if threshold < diff_len {
-        return 0;
+        return threshold;
     }
 
-    // initialize ZERO_K
-    let ZERO_K = ((if s1len < threshold { s1len } else { threshold }) >> 1) + 2;
-    let arr_len = diff_len + ZERO_K * 2 + 2;
+    // initialize zero_k
+    let zero_k: i32 = ((std::cmp::min(s1len, threshold) >> 1) + 2) as i32;
+    let arr_len = diff_len + (zero_k as usize) * 2 + 2;
     let mut current_row = vec![-1i32; arr_len];
     let mut next_row = vec![-1i32; arr_len];
 
     let mut i = 0;
-    let condition_row = diff_len + ZERO_K;
+    let condition_row = diff_len as i32 + zero_k;
     let end_max = condition_row << 1;
-    loop {
+    return loop {
         i += 1;
-        let (current_row, next_row) = (&mut next_row, &mut current_row);
+        unsafe {
+            swap(&mut next_row, &mut current_row);
+        }
+        // let (mut current_row, mut next_row) = (next_row, current_row);
 
         let start: i32;
         let mut next_cell: i32;
         let mut previous_cell: i32;
         let mut current_cell: i32 = -1;
 
-        if i <= ZERO_K {
+        if i <= zero_k {
             start = -(i as i32) + 1;
-            next_cell = (i - 2) as i32;
+            next_cell = i as i32 - 2i32;
         } else {
-            start = (i - (ZERO_K << 1) + 1) as i32;
-            next_cell = current_row[ZERO_K + start as usize];
+            start = i - (zero_k << 1) + 1;
+            next_cell = current_row[(zero_k + start) as usize];
         }
 
         let end: i32;
         if i <= condition_row {
-            end = i as i32;
-            next_row[ZERO_K + i] = -1;
+            end = i;
+            next_row[(zero_k + i) as usize] = -1;
         } else {
-            end = (end_max - i) as i32;
+            end = end_max - i;
         }
 
-        let mut row_index = start as usize + ZERO_K;
+        let mut row_index = (start + zero_k) as usize;
 
         let mut t = 0i32;
 
@@ -88,8 +99,8 @@ fn ukkonen(s1: &[u8], s2: &[u8], threshold: usize, record_id: usize) -> usize {
 
             // max()
             t = std::cmp::max(
-                current_cell + 1,
-                std::cmp::max(previous_cell, next_cell + 1),
+                std::cmp::max(current_cell + 1, previous_cell),
+                next_cell + 1,
             );
 
             while (t as usize) < s1len
@@ -99,17 +110,22 @@ fn ukkonen(s1: &[u8], s2: &[u8], threshold: usize, record_id: usize) -> usize {
                 t += 1;
             }
 
+            next_row[row_index] = t;
             row_index += 1;
         }
 
-        next_row[row_index] = t;
 
-        if !(next_row[condition_row] < (s1len as i32) && i <= threshold) {
-            break;
+        if !(next_row[condition_row as usize] < (s1len as i32) && i <= (threshold as i32)) {
+            break i as usize - 1;
         }
-    }
+    };
 
-    if i - 1 < threshold {
+    // if cfg!(debug_assertions) {
+    //     println!("\t{}", i - 1);
+    // }
+
+    return i as usize - 1;
+    if i - 1 <= (threshold as i32) {
         record_id
     } else {
         0
@@ -239,9 +255,17 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
         let qwbytes = query_word.as_bytes();
         for (id, word) in srchdata.iter().enumerate() {
             if (word.len() > qwlen) {
-                sum += ukkonen(qwbytes, word, t, id + 1);
+                let tres = ukkonen(qwbytes, word, t + 1, id + 1);
+                // println!("{}\t{}\t{}", std::str::from_utf8(word).unwrap(), query_word, tres);
+                if tres <= t {
+                    sum += id + 1;
+                }
             } else {
-                sum += ukkonen(word, qwbytes, t, id + 1);
+                let tres =  ukkonen(word, qwbytes, t + 1, id + 1);
+                // println!("{}\t{}\t{}", std::str::from_utf8(word).unwrap(), query_word, tres);
+                if tres <= t {
+                    sum += id + 1;
+                }
             }
         }
         // sum += lve(&srchdata, word, t, &mut matrix, longest_word);
