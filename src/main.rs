@@ -62,9 +62,10 @@ fn ukkonen(s1: &[u8], s2: &[u8], threshold: usize, record_id: usize) -> usize {
     let end_max = condition_row << 1;
     return loop {
         i += 1;
-        unsafe {
-            swap(&mut next_row, &mut current_row);
-        }
+        std::mem::swap(&mut next_row, &mut current_row);
+        // unsafe {
+        //     swap(&mut next_row, &mut current_row);
+        // }
         // let (mut current_row, mut next_row) = (next_row, current_row);
 
         let start: i32;
