@@ -63,7 +63,7 @@ fn ukkonen(s1: &[u8], s2: &[u8], threshold: usize, record_id: usize) -> usize {
     let mut i = 0;
     let condition_row = diff_len as i32 + zero_k;
     let end_max = condition_row << 1;
-    return loop {
+    loop {
         i += 1;
         std::mem::swap(&mut next_row, &mut current_row);
 
@@ -121,7 +121,7 @@ fn ukkonen(s1: &[u8], s2: &[u8], threshold: usize, record_id: usize) -> usize {
                 0
             };
         }
-    };
+    }
 }
 
 fn read<R: Read>(reader: &mut BufReader<R>) {
@@ -149,7 +149,6 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
 
     line.clear();
     // read query words
-    let mut sum: usize = 0;
     // println!("{}", longest_word);
 
     while let Ok(bytes_read) = reader.read_line(&mut line) {
@@ -174,7 +173,7 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
             let qwlen = query_word.len();
             let qwbytes = query_word.as_bytes();
             srchdata.iter().enumerate().for_each(|(id, word)| {
-                if (word.len() > qwlen) {
+                if word.len() > qwlen {
                     sum += ukkonen(qwbytes, word, t + 1, id + 1);
                 } else {
                     sum += ukkonen(word, qwbytes, t + 1, id + 1);
@@ -183,16 +182,6 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
             sum
         })
         .sum();
-
-    // let qwlen = query_word.len();
-    // let qwbytes = query_word.as_bytes();
-    // for (id, word) in srchdata.iter().enumerate() {
-    // if (word.len() > qwlen) {
-    //     sum += ukkonen(qwbytes, word, t + 1, id + 1);
-    // } else {
-    //     sum += ukkonen(word, qwbytes, t + 1, id + 1);
-    // }
-    // }
 
     println!("{}", sum);
     stdout().flush().unwrap();
