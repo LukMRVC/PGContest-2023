@@ -12,3 +12,4 @@ overflow-checks=false
 
 [dependencies]
 ascii = "1.1.0"
+rayon = "1.6.0"

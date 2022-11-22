@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use std::env;
 use std::fs::File;
 use std::io::{prelude::*, stdin, stdout, BufReader};
@@ -125,7 +126,7 @@ fn ukkonen(s1: &[u8], s2: &[u8], threshold: usize, record_id: usize) -> usize {
 
 fn read<R: Read>(reader: &mut BufReader<R>) {
     let mut srchdata: Vec<Vec<u8>> = Vec::<Vec<u8>>::with_capacity(8196usize);
-    // let mut querydata: Vec<(String, usize)> = Vec::<Vec<(String, usize)>>::with_capacity(8196);
+    let mut querydata: Vec<(String, usize)> = Vec::<(String, usize)>::with_capacity(8196);
     let mut line = String::with_capacity(128);
     let srch_line = "[SEARCH]";
 
@@ -161,18 +162,37 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
             panic!("Cannot split!");
         };
         let t: usize = t.parse().unwrap();
+        querydata.push((query_word.to_owned(), t));
 
-        let qwlen = query_word.len();
-        let qwbytes = query_word.as_bytes();
-        for (id, word) in srchdata.iter().enumerate() {
-            if (word.len() > qwlen) {
-                sum += ukkonen(qwbytes, word, t + 1, id + 1);
-            } else {
-                sum += ukkonen(word, qwbytes, t + 1, id + 1);
-            }
-        }
         line.clear();
     }
+
+    let sum: usize = querydata
+        .par_iter()
+        .map(|(query_word, t)| {
+            let mut sum = 0;
+            let qwlen = query_word.len();
+            let qwbytes = query_word.as_bytes();
+            srchdata.iter().enumerate().for_each(|(id, word)| {
+                if (word.len() > qwlen) {
+                    sum += ukkonen(qwbytes, word, t + 1, id + 1);
+                } else {
+                    sum += ukkonen(word, qwbytes, t + 1, id + 1);
+                }
+            });
+            sum
+        })
+        .sum();
+
+    // let qwlen = query_word.len();
+    // let qwbytes = query_word.as_bytes();
+    // for (id, word) in srchdata.iter().enumerate() {
+    // if (word.len() > qwlen) {
+    //     sum += ukkonen(qwbytes, word, t + 1, id + 1);
+    // } else {
+    //     sum += ukkonen(word, qwbytes, t + 1, id + 1);
+    // }
+    // }
 
     println!("{}", sum);
     stdout().flush().unwrap();
