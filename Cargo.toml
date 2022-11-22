@@ -11,3 +11,4 @@ debug=false
 overflow-checks=false
 
 [dependencies]
+ascii = "1.1.0"

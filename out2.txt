@@ -1,0 +1,12 @@
+S1:kryl	S2:karel
+S1:dale	S2:kafe
+S1:chobot	S2:robot
+S1:lak	S2:ork
+S1:lak	S2:vlak
+S1:kanar	S2:kanape
+S1:hul	S2:stul
+S1:hul	S2:nhl
+S1:panak	S2:kanape
+S1:panak	S2:vlak
+S1:panak	S2:parek
+105
