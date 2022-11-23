@@ -7,8 +7,12 @@ edition = "2021"
 
 [profile.release]
 opt-level=3
-debug=1
+# debug=1
 overflow-checks=false
+lto=true
+
+[rust]
+# debuginfo-level = 1
 
 [dependencies]
 ascii = "1.1.0"

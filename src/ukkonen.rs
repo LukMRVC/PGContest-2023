@@ -85,7 +85,7 @@ pub fn ukkonen(s1: &[u8], s2: &[u8], threshold: usize, record_id: usize) -> usiz
 
         let mut row_index = (start + zero_k) as usize;
 
-        let mut t = 0usize;
+        let mut t;
 
         for k in start..end {
             previous_cell = current_cell;
@@ -97,6 +97,8 @@ pub fn ukkonen(s1: &[u8], s2: &[u8], threshold: usize, record_id: usize) -> usiz
                 std::cmp::max(current_cell + 1, previous_cell),
                 next_cell + 1,
             ) as usize;
+
+            // t = previous_cell.max((current_cell + 1).max(next_cell + 1)) as usize;
 
             // let tk = t + k usize;
 

@@ -1,7 +1,7 @@
 benchmark:
   script:
     - mkdir -p build/release
-    - cargo build --release
+    - RUSTFLAGS="-C target-cpu=native" cargo build --release
     - cp target/release/pgcontest build/release/contest
     - cd build/release
     - /uploader/uploader string-similarity-search ./contest
