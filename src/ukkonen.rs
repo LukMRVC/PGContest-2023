@@ -51,9 +51,9 @@ pub fn ukkonen(s1: &[u8], s2: &[u8], threshold: usize, record_id: usize) -> usiz
     // initialize zero_k
     let zero_k: i64 = ((std::cmp::min(s1len, new_threshold) >> 1) + 2) as i64;
 
-    let arr_len = diff_len + (zero_k as usize) * 2 + 2;
-    let mut current_row = vec![-1i64; arr_len];
-    let mut next_row = vec![-1i64; arr_len];
+    // let arr_len = diff_len + (zero_k as usize) * 2 + 2;
+    let mut current_row = vec![-1i64; 96];
+    let mut next_row = vec![-1i64; 96];
 
     let mut i = 0;
     let condition_row = diff_len as i64 + zero_k;
@@ -97,6 +97,8 @@ pub fn ukkonen(s1: &[u8], s2: &[u8], threshold: usize, record_id: usize) -> usiz
                 std::cmp::max(current_cell + 1, previous_cell),
                 next_cell + 1,
             ) as usize;
+
+            // let tk = t + k usize;
 
             while t < s1len && (t + k as usize) < s2len && s1[t] == s2[(t + k as usize)] {
                 t += 1;

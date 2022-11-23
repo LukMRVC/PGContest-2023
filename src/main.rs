@@ -51,7 +51,7 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
     }
 
     let sum: usize = querydata
-        .par_iter()
+        .iter()
         .map(|(query_word, t)| {
             let mut sum = 0;
             let qwlen = query_word.len();
