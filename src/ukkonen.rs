@@ -49,33 +49,33 @@ pub fn ukkonen(s1: &[u8], s2: &[u8], threshold: usize, record_id: usize) -> usiz
     }
 
     // initialize zero_k
-    let zero_k: i32 = ((std::cmp::min(s1len, new_threshold) >> 1) + 2) as i32;
+    let zero_k: i64 = ((std::cmp::min(s1len, new_threshold) >> 1) + 2) as i64;
 
     let arr_len = diff_len + (zero_k as usize) * 2 + 2;
-    let mut current_row = vec![-1i32; arr_len];
-    let mut next_row = vec![-1i32; arr_len];
+    let mut current_row = vec![-1i64; arr_len];
+    let mut next_row = vec![-1i64; arr_len];
 
     let mut i = 0;
-    let condition_row = diff_len as i32 + zero_k;
+    let condition_row = diff_len as i64 + zero_k;
     let end_max = condition_row << 1;
     loop {
         i += 1;
         std::mem::swap(&mut next_row, &mut current_row);
 
-        let start: i32;
-        let mut next_cell: i32;
-        let mut previous_cell: i32;
-        let mut current_cell: i32 = -1;
+        let start: i64;
+        let mut next_cell: i64;
+        let mut previous_cell: i64;
+        let mut current_cell: i64 = -1;
 
         if i <= zero_k {
-            start = -(i as i32) + 1;
-            next_cell = i as i32 - 2i32;
+            start = -(i as i64) + 1;
+            next_cell = i as i64 - 2i64;
         } else {
             start = i - (zero_k << 1) + 1;
             next_cell = current_row[(zero_k + start) as usize];
         }
 
-        let end: i32;
+        let end: i64;
         if i <= condition_row {
             end = i;
             next_row[(zero_k + i) as usize] = -1;
@@ -85,7 +85,7 @@ pub fn ukkonen(s1: &[u8], s2: &[u8], threshold: usize, record_id: usize) -> usiz
 
         let mut row_index = (start + zero_k) as usize;
 
-        let mut t = 0i32;
+        let mut t = 0usize;
 
         for k in start..end {
             previous_cell = current_cell;
@@ -96,20 +96,17 @@ pub fn ukkonen(s1: &[u8], s2: &[u8], threshold: usize, record_id: usize) -> usiz
             t = std::cmp::max(
                 std::cmp::max(current_cell + 1, previous_cell),
                 next_cell + 1,
-            );
+            ) as usize;
 
-            while (t as usize) < s1len
-                && ((t + k) as usize) < s2len
-                && s1[t as usize] == s2[(t + k) as usize]
-            {
+            while t < s1len && (t + k as usize) < s2len && s1[t] == s2[(t + k as usize)] {
                 t += 1;
             }
 
-            next_row[row_index] = t;
+            next_row[row_index] = t as i64;
             row_index += 1;
         }
 
-        if !(next_row[condition_row as usize] < (s1len as i32) && i <= (new_threshold as i32)) {
+        if !(next_row[condition_row as usize] < (s1len as i64) && i <= (new_threshold as i64)) {
             break if i as usize - 1 <= (threshold - 1) {
                 record_id
             } else {

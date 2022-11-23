@@ -5,6 +5,13 @@ use std::io::{prelude::*, stdin, stdout, BufReader};
 mod ukkonen;
 use ukkonen::ukkonen;
 
+#[cfg(not(target_env = "msvc"))]
+use tikv_jemallocator::Jemalloc;
+
+#[cfg(not(target_env = "msvc"))]
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
+
 fn read<R: Read>(reader: &mut BufReader<R>) {
     let mut srchdata: Vec<Vec<u8>> = Vec::<Vec<u8>>::with_capacity(8196usize);
     let mut querydata: Vec<(String, usize)> = Vec::<(String, usize)>::with_capacity(8196);
