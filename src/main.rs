@@ -6,6 +6,9 @@ use std::env;
 use std::fs::File;
 use std::io::{prelude::*, stdin, stdout, BufReader};
 use std::time::Instant;
+
+use crossbeam_channel::unbounded;
+use std::thread;
 use ukkonen::ukkonen;
 
 use crate::filters::Qgram;
@@ -18,6 +21,20 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
     let mut line = String::with_capacity(256);
     let srch_line = "[SEARCH]";
 
+    let (sx, tx) = unbounded::<String>();
+
+    let handle = std::thread::spawn(move || {
+        let mut qgrams: Vec<Qgram> = Vec::with_capacity(1024 * 1024);
+        loop {
+            if let Ok(msg) = tx.recv() {
+                if msg.eq_ignore_ascii_case(srch_line) {
+                    break qgrams;
+                }
+                // println!("Building qgram");
+                qgrams.push(Qgram::new(msg.as_bytes()));
+            }
+        }
+    });
     // read database words
     while let Ok(bytes_read) = reader.read_line(&mut line) {
         if bytes_read == 0 {
@@ -25,11 +42,14 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
         }
         // remove newline
         line.pop();
+        let line_clone = line.clone();
+        sx.send(line_clone.clone())
+            .expect("Failed to send line as bytes");
         if srch_line.eq_ignore_ascii_case(&line) {
             break;
         }
 
-        srchdata.push(line.clone().into_bytes());
+        srchdata.push(line_clone.into_bytes());
         line.clear();
     }
 
@@ -51,9 +71,12 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
     }
     // let elapsed = start.elapsed();
     // println!("Reading input took: {} MS", elapsed.as_millis());
+    // println!("Input finished");
 
-    let start = Instant::now();
-    let srchgrams: Vec<Qgram> = srchdata.iter().map(|data| Qgram::new(data)).collect();
+    // let start = Instant::now();
+    // let srchgrams: Vec<Qgram> = srchdata.iter().map(|data| Qgram::new(data)).collect();
+    let srchgrams: Vec<Qgram> = handle.join().unwrap();
+
     // println!("Building Qgrams took: {} MS", start.elapsed().as_millis());
 
     let start = Instant::now();

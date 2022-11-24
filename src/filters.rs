@@ -56,7 +56,7 @@ impl Qgram {
         //     .iter()
         //     .zip(q2.ranking_profile.iter())
         //     .fold(0, |accum, (d1, d2)| accum + d1.abs_diff(*d2))
-        for i in (0..(Self::PROFILE_LEN)).step_by(4) {
+        for i in (0..(Self::PROFILE_LEN - 4)).step_by(4) {
             // result[i] = q1.ranking_profile[i].abs_diff(q2.ranking_profile[i]);
             // result[i + 1] = q1.ranking_profile[i + 1].abs_diff(q2.ranking_profile[i + 1]);
             // result[i + 2] = q1.ranking_profile[i + 2].abs_diff(q2.ranking_profile[i + 2]);

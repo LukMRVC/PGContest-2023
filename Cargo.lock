@@ -108,6 +108,7 @@ name = "pgcontest"
 version = "0.1.0"
 dependencies = [
  "ascii",
+ "crossbeam-channel",
  "rayon",
 ]
 
