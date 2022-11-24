@@ -1,5 +1,3 @@
-use std::collections::{HashMap, HashSet};
-
 #[derive(Debug, Clone)]
 pub struct Qgram {
     // profile: Vec<&'a [u8]>,

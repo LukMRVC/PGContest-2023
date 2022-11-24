@@ -52,33 +52,36 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
     // let elapsed = start.elapsed();
     // println!("Reading input took: {} MS", elapsed.as_millis());
 
-    let start = Instant::now();
-    let srchgrams: Vec<Qgram> = srchdata.iter().map(|data| Qgram::new(data)).collect();
+    // let start = Instant::now();
+    // let srchgrams: Vec<Qgram> = srchdata.iter().map(|data| Qgram::new(data)).collect();
     // println!("Building Qgrams took: {} MS", start.elapsed().as_millis());
 
-    let start = Instant::now();
+    // let start = Instant::now();
     let sum: usize = querydata
         .par_iter()
-        .map(|(query_word, t)| {
-            let mut sum = 0;
-            let qwlen = query_word.len();
-            let qwbytes = query_word.as_bytes();
-            let query_qgram = Qgram::new(qwbytes);
-            let t2 = *t * 2;
+        .fold(
+            || 0usize,
+            |acc, (query_word, t)| {
+                let mut sum = 0;
+                let qwlen = query_word.len();
+                let qwbytes = query_word.as_bytes();
+                let query_qgram = Qgram::new(qwbytes);
+                let t2 = *t * 2;
 
-            srchdata
-                .iter()
-                .enumerate()
-                .filter(|(wid, _)| Qgram::dist(&srchgrams[*wid], &query_qgram) <= t2)
-                .for_each(|(id, word)| {
-                    if word.len() > qwlen {
-                        sum += ukkonen(qwbytes, word, t + 1, id + 1);
-                    } else {
-                        sum += ukkonen(word, qwbytes, t + 1, id + 1);
-                    }
-                });
-            sum
-        })
+                srchdata
+                    .iter()
+                    .enumerate()
+                    // .filter(|(wid, _)| Qgram::dist(&srchgrams[*wid], &query_qgram) <= t2)
+                    .for_each(|(id, word)| {
+                        if word.len() > qwlen {
+                            sum += ukkonen(qwbytes, word, t + 1, id + 1);
+                        } else {
+                            sum += ukkonen(word, qwbytes, t + 1, id + 1);
+                        }
+                    });
+                acc + sum
+            },
+        )
         .sum();
     // println!("Querying took: {} MS", start.elapsed().as_millis());
     println!("{}", sum);
