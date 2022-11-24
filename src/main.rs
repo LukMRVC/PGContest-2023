@@ -3,6 +3,7 @@ use std::env;
 use std::fs::File;
 use std::io::{prelude::*, stdin, stdout, BufReader};
 mod ukkonen;
+use std::time::Instant;
 use ukkonen::ukkonen;
 
 // #[cfg(not(target_env = "msvc"))]
@@ -13,9 +14,11 @@ use ukkonen::ukkonen;
 // static GLOBAL: Jemalloc = Jemalloc;
 
 fn read<R: Read>(reader: &mut BufReader<R>) {
-    let mut srchdata: Vec<Vec<u8>> = Vec::<Vec<u8>>::with_capacity(8196usize);
-    let mut querydata: Vec<(String, usize)> = Vec::<(String, usize)>::with_capacity(8196);
-    let mut line = String::with_capacity(128);
+    // let start = Instant::now();
+    let mut srchdata: Vec<Vec<u8>> = Vec::<Vec<u8>>::with_capacity(1024 * 1024 * 64);
+    let mut querydata: Vec<(String, usize)> =
+        Vec::<(String, usize)>::with_capacity(1024 * 1024 * 64);
+    let mut line = String::with_capacity(256);
     let srch_line = "[SEARCH]";
 
     // read database words
@@ -49,6 +52,8 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
 
         line.clear();
     }
+    // let elapsed = start.elapsed();
+    // println!("Reading input took: {} MS", elapsed.as_millis());
 
     let sum: usize = querydata
         .par_iter()
