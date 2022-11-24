@@ -47,20 +47,33 @@ impl Qgram {
         Qgram { ranking_profile }
     }
 
-    pub fn dist(q1: &Qgram, q2: &Qgram) -> usize {
-        let mut result = vec![0; Self::PROFILE_LEN];
+    pub fn dist(q1: &Qgram, q2: &Qgram, t: Option<usize>) -> usize {
+        let t = t.unwrap_or(usize::MAX);
+        // let mut result = vec![0; Self::PROFILE_LEN];
+
+        let (mut s1, mut s2, mut s3, mut s4) = (0, 0, 0, 0);
         // q1.ranking_profile
         //     .iter()
         //     .zip(q2.ranking_profile.iter())
         //     .fold(0, |accum, (d1, d2)| accum + d1.abs_diff(*d2))
         for i in (0..(Self::PROFILE_LEN)).step_by(4) {
-            result[i] = q1.ranking_profile[i].abs_diff(q2.ranking_profile[i]);
-            result[i + 1] = q1.ranking_profile[i + 1].abs_diff(q2.ranking_profile[i + 1]);
-            result[i + 2] = q1.ranking_profile[i + 2].abs_diff(q2.ranking_profile[i + 2]);
-            result[i + 3] = q1.ranking_profile[i + 3].abs_diff(q2.ranking_profile[i + 3]);
+            // result[i] = q1.ranking_profile[i].abs_diff(q2.ranking_profile[i]);
+            // result[i + 1] = q1.ranking_profile[i + 1].abs_diff(q2.ranking_profile[i + 1]);
+            // result[i + 2] = q1.ranking_profile[i + 2].abs_diff(q2.ranking_profile[i + 2]);
+            // result[i + 3] = q1.ranking_profile[i + 3].abs_diff(q2.ranking_profile[i + 3]);
+
+            s1 += q1.ranking_profile[i].abs_diff(q2.ranking_profile[i]);
+            s2 += q1.ranking_profile[i + 1].abs_diff(q2.ranking_profile[i + 1]);
+            s3 += q1.ranking_profile[i + 2].abs_diff(q2.ranking_profile[i + 2]);
+            s4 += q1.ranking_profile[i + 3].abs_diff(q2.ranking_profile[i + 3]);
+
+            if s1 + s2 + s3 + s4 > t {
+                return usize::MAX;
+            }
         }
 
-        result.into_iter().sum()
+        s1 + s2 + s3 + s4
+        // result.into_iter().sum()
     }
 
     #[inline(always)]

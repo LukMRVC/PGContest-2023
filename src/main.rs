@@ -52,11 +52,11 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
     // let elapsed = start.elapsed();
     // println!("Reading input took: {} MS", elapsed.as_millis());
 
-    // let start = Instant::now();
-    // let srchgrams: Vec<Qgram> = srchdata.iter().map(|data| Qgram::new(data)).collect();
+    let start = Instant::now();
+    let srchgrams: Vec<Qgram> = srchdata.iter().map(|data| Qgram::new(data)).collect();
     // println!("Building Qgrams took: {} MS", start.elapsed().as_millis());
 
-    // let start = Instant::now();
+    let start = Instant::now();
     let sum: usize = querydata
         .par_iter()
         .fold(
@@ -68,10 +68,21 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
                 let query_qgram = Qgram::new(qwbytes);
                 let t2 = *t * 2;
 
+                // let init_len = srchdata.len();
+
+                // let filtered: Vec<(usize, &Vec<u8>)> = srchdata
+                //     .iter()
+                //     .enumerate()
+                //     .filter(|(wid, _)| Qgram::dist(&srchgrams[*wid], &query_qgram, Some(t2)) <= t2)
+                //     .collect();
+                // let filtered_len = filtered.len();
+
+                // println!("Filtered: {}", init_len - filtered_len);
+
                 srchdata
                     .iter()
                     .enumerate()
-                    // .filter(|(wid, _)| Qgram::dist(&srchgrams[*wid], &query_qgram) <= t2)
+                    .filter(|(wid, _)| Qgram::dist(&srchgrams[*wid], &query_qgram, Some(t2)) <= t2)
                     .for_each(|(id, word)| {
                         if word.len() > qwlen {
                             sum += ukkonen(qwbytes, word, t + 1, id + 1);
