@@ -1,17 +1,12 @@
+mod filters;
+mod ukkonen;
+
 use rayon::prelude::*;
 use std::env;
 use std::fs::File;
 use std::io::{prelude::*, stdin, stdout, BufReader};
-mod ukkonen;
 use std::time::Instant;
 use ukkonen::ukkonen;
-
-// #[cfg(not(target_env = "msvc"))]
-// use tikv_jemallocator::Jemalloc;
-
-// #[cfg(not(target_env = "msvc"))]
-// #[global_allocator]
-// static GLOBAL: Jemalloc = Jemalloc;
 
 fn read<R: Read>(reader: &mut BufReader<R>) {
     // let start = Instant::now();
@@ -55,17 +50,31 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
     // let elapsed = start.elapsed();
     // println!("Reading input took: {} MS", elapsed.as_millis());
 
+    let q = 2;
+    let q2 = 2 * q;
+    // let start = Instant::now();
+    let srchgrams: Vec<filters::Qgram> = srchdata
+        .par_iter()
+        .map(|data| filters::Qgram::new(data, q))
+        .collect();
+    // let elapsed = start.elapsed();
+    // println!("Building Qgrams took: {} MS", elapsed.as_millis());
+
     let sum: usize = querydata
         .par_iter()
         .map(|(query_word, t)| {
             let mut sum = 0;
             let qwlen = query_word.len();
             let qwbytes = query_word.as_bytes();
+            let query_qgram = filters::Qgram::new(qwbytes, q);
+
             srchdata.iter().enumerate().for_each(|(id, word)| {
-                if word.len() > qwlen {
-                    sum += ukkonen(qwbytes, word, t + 1, id + 1);
-                } else {
-                    sum += ukkonen(word, qwbytes, t + 1, id + 1);
+                if (query_qgram.dist(&srchgrams[id], *t) / q2) <= *t {
+                    if word.len() > qwlen {
+                        sum += ukkonen(qwbytes, word, t + 1, id + 1);
+                    } else {
+                        sum += ukkonen(word, qwbytes, t + 1, id + 1);
+                    }
                 }
             });
             sum

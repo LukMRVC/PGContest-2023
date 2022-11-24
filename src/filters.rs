@@ -21,7 +21,7 @@ impl<'a> Qgram<'a> {
         Qgram { profile: prof }
     }
 
-    pub fn dist(&self, other: &Qgram) -> usize {
+    pub fn dist(&self, other: &Qgram, t: usize) -> usize {
         let mut union = HashSet::<&'a [u8]>::new();
         union.extend(self.profile.keys());
         union.extend(other.profile.keys());
@@ -36,12 +36,15 @@ impl<'a> Qgram<'a> {
                 v1 += val;
             }
             agg += v0.abs_diff(v1);
+            if agg > 2 * t {
+                return agg;
+            }
         }
 
         agg
     }
 
     pub fn Dist(q1: &Qgram, q2: &Qgram) -> usize {
-        q1.dist(q2)
+        q1.dist(q2, 0)
     }
 }
