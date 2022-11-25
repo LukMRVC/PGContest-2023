@@ -8,7 +8,6 @@ use std::io::{prelude::*, stdin, stdout, BufReader};
 use std::time::Instant;
 
 use crossbeam_channel::unbounded;
-use std::thread;
 use ukkonen::ukkonen;
 
 use crate::filters::Qgram;
@@ -77,42 +76,31 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
     // let srchgrams: Vec<Qgram> = srchdata.iter().map(|data| Qgram::new(data)).collect();
     let srchgrams: Vec<Qgram> = handle.join().unwrap();
 
-    // println!("Building Qgrams took: {} MS", start.elapsed().as_millis());
+    // println!("Building Qgrams took: {} MS", start.elapsed().as_micros());
 
-    let start = Instant::now();
     let sum: usize = querydata
         .par_iter()
         .fold(
             || 0usize,
             |acc, (query_word, t)| {
-                let mut sum = 0;
+                // let mut sum = 0;
                 let qwlen = query_word.len();
                 let qwbytes = query_word.as_bytes();
                 let query_qgram = Qgram::new(qwbytes);
                 let t2 = *t * 2;
 
-                // let init_len = srchdata.len();
-
-                // let filtered: Vec<(usize, &Vec<u8>)> = srchdata
-                //     .iter()
-                //     .enumerate()
-                //     .filter(|(wid, _)| Qgram::dist(&srchgrams[*wid], &query_qgram, Some(t2)) <= t2)
-                //     .collect();
-                // let filtered_len = filtered.len();
-
-                // println!("Filtered: {}", init_len - filtered_len);
-
-                srchdata
+                let sum: usize = srchdata
                     .iter()
                     .enumerate()
                     .filter(|(wid, _)| Qgram::dist(&srchgrams[*wid], &query_qgram, Some(t2)) <= t2)
-                    .for_each(|(id, word)| {
+                    .map(|(id, word)| {
                         if word.len() > qwlen {
-                            sum += ukkonen(qwbytes, word, t + 1, id + 1);
+                            ukkonen(qwbytes, word, t + 1, id + 1)
                         } else {
-                            sum += ukkonen(word, qwbytes, t + 1, id + 1);
+                            ukkonen(word, qwbytes, t + 1, id + 1)
                         }
-                    });
+                    })
+                    .sum();
                 acc + sum
             },
         )

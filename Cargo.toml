@@ -9,7 +9,6 @@ edition = "2021"
 opt-level=3
 # debug=1
 overflow-checks=false
-# lto=true
 
 # [rust]
 # debuginfo-level = 1

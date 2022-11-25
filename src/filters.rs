@@ -1,7 +1,8 @@
 #[derive(Debug, Clone)]
 pub struct Qgram {
     // profile: Vec<&'a [u8]>,
-    ranking_profile: Vec<usize>,
+    // ranking_profile: Vec<usize>,
+    ranking_profile: [usize; 26],
 }
 
 impl Qgram {
@@ -32,7 +33,7 @@ impl Qgram {
     const PROFILE_LEN: usize = Self::SIGMA;
 
     pub fn new(s: &[u8]) -> Self {
-        let mut ranking_profile = vec![0; Self::PROFILE_LEN];
+        let mut ranking_profile = [0; Self::PROFILE_LEN];
         let sdist = s.len() - Self::Q + 1;
         // let mut init_rank = Self::rank2(&s[0..Self::Q]);
         let mut init_rank = Self::TRANSLATE_MAP[s[0] as usize];
@@ -51,31 +52,10 @@ impl Qgram {
 
     pub fn dist(q1: &Qgram, q2: &Qgram, t: Option<usize>) -> usize {
         let t = t.unwrap_or(usize::MAX);
-        // let mut result = vec![0; Self::PROFILE_LEN];
-
-        let (mut s1, mut s2, mut s3, mut s4) = (0, 0, 0, 0);
-        // q1.ranking_profile
-        //     .iter()
-        //     .zip(q2.ranking_profile.iter())
-        //     .fold(0, |accum, (d1, d2)| accum + d1.abs_diff(*d2))
-        for i in (0..(Self::PROFILE_LEN - 4)).step_by(4) {
-            // result[i] = q1.ranking_profile[i].abs_diff(q2.ranking_profile[i]);
-            // result[i + 1] = q1.ranking_profile[i + 1].abs_diff(q2.ranking_profile[i + 1]);
-            // result[i + 2] = q1.ranking_profile[i + 2].abs_diff(q2.ranking_profile[i + 2]);
-            // result[i + 3] = q1.ranking_profile[i + 3].abs_diff(q2.ranking_profile[i + 3]);
-
-            s1 += q1.ranking_profile[i].abs_diff(q2.ranking_profile[i]);
-            s2 += q1.ranking_profile[i + 1].abs_diff(q2.ranking_profile[i + 1]);
-            s3 += q1.ranking_profile[i + 2].abs_diff(q2.ranking_profile[i + 2]);
-            s4 += q1.ranking_profile[i + 3].abs_diff(q2.ranking_profile[i + 3]);
-
-            if s1 + s2 + s3 + s4 > t {
-                return usize::MAX;
-            }
-        }
-
-        s1 + s2 + s3 + s4
-        // result.into_iter().sum()
+        q1.ranking_profile
+            .iter()
+            .zip(q2.ranking_profile.iter())
+            .fold(0, |accum, (d1, d2)| accum + d1.abs_diff(*d2))
     }
 
     #[inline(always)]
@@ -91,31 +71,4 @@ impl Qgram {
             + Self::TRANSLATE_MAP[slice[1] as usize] * Self::SIGMA
             + Self::TRANSLATE_MAP[slice[2] as usize]
     }
-
-    // pub fn dist(&self, other: &Qgram, t: usize) -> usize {
-    //     let mut union = HashSet::<&'a [u8]>::new();
-    //     union.extend(self.profile.keys());
-    //     union.extend(other.profile.keys());
-
-    //     let mut agg = 0;
-    //     for k in union.into_iter() {
-    //         let (mut v0, mut v1) = (0, 0);
-    //         if let Some(val) = self.profile.get(k) {
-    //             v0 += val;
-    //         }
-    //         if let Some(val) = other.profile.get(k) {
-    //             v1 += val;
-    //         }
-    //         agg += v0.abs_diff(v1);
-    //         if agg > 2 * t {
-    //             return agg;
-    //         }
-    //     }
-
-    //     agg
-    // }
-
-    // pub fn Dist(q1: &Qgram, q2: &Qgram) -> usize {
-    //     q1.dist(q2, 0)
-    // }
 }
