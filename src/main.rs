@@ -20,20 +20,20 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
     let mut line = String::with_capacity(256);
     let srch_line = "[SEARCH]";
 
-    let (sx, tx) = unbounded::<String>();
+    // let (sx, tx) = unbounded::<String>();
 
-    let handle = std::thread::spawn(move || {
-        let mut qgrams: Vec<Qgram> = Vec::with_capacity(1024 * 1024);
-        loop {
-            if let Ok(msg) = tx.recv() {
-                if msg.eq_ignore_ascii_case(srch_line) {
-                    break qgrams;
-                }
-                // println!("Building qgram");
-                qgrams.push(Qgram::new(msg.as_bytes()));
-            }
-        }
-    });
+    // let handle = std::thread::spawn(move || {
+    //     let mut qgrams: Vec<Qgram> = Vec::with_capacity(1024 * 1024);
+    //     loop {
+    //         if let Ok(msg) = tx.recv() {
+    //             if msg.eq_ignore_ascii_case(srch_line) {
+    //                 break qgrams;
+    //             }
+    //             // println!("Building qgram");
+    //             qgrams.push(Qgram::new(msg.as_bytes()));
+    //         }
+    //     }
+    // });
     // read database words
     while let Ok(bytes_read) = reader.read_line(&mut line) {
         if bytes_read == 0 {
@@ -42,8 +42,8 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
         // remove newline
         line.pop();
         let line_clone = line.clone();
-        sx.send(line_clone.clone())
-            .expect("Failed to send line as bytes");
+        // sx.send(line_clone.clone())
+        //     .expect("Failed to send line as bytes");
         if srch_line.eq_ignore_ascii_case(&line) {
             break;
         }
@@ -73,8 +73,8 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
     // println!("Input finished");
 
     // let start = Instant::now();
-    // let srchgrams: Vec<Qgram> = srchdata.iter().map(|data| Qgram::new(data)).collect();
-    let srchgrams: Vec<Qgram> = handle.join().unwrap();
+    let srchgrams: Vec<Qgram> = srchdata.iter().map(|data| Qgram::new(data)).collect();
+    // let srchgrams: Vec<Qgram> = handle.join().unwrap();
 
     // println!("Building Qgrams took: {} MS", start.elapsed().as_micros());
 
