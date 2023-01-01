@@ -68,8 +68,8 @@ pub fn ukkonen(s1: &[u8], s2: &[u8], threshold: usize, record_id: usize) -> usiz
         let mut current_cell: i64 = -1;
 
         if i <= zero_k {
-            start = -(i as i64) + 1;
-            next_cell = i as i64 - 2i64;
+            start = -i + 1;
+            next_cell = i - 2i64;
         } else {
             start = i - (zero_k << 1) + 1;
             next_cell = current_row[(zero_k + start) as usize];

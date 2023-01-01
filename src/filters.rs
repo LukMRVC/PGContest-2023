@@ -2,7 +2,7 @@
 pub struct Qgram {
     // profile: Vec<&'a [u8]>,
     // ranking_profile: Vec<usize>,
-    ranking_profile: [usize; 26],
+    ranking_profile: [u8; 26],
 }
 
 impl Qgram {
@@ -36,23 +36,20 @@ impl Qgram {
         let mut ranking_profile = [0; Self::PROFILE_LEN];
         let sdist = s.len() - Self::Q + 1;
         // let mut init_rank = Self::rank2(&s[0..Self::Q]);
-        let mut init_rank = Self::TRANSLATE_MAP[s[0] as usize];
-        ranking_profile[init_rank] += 1;
-        for i in 1..sdist {
+        ranking_profile[Self::TRANSLATE_MAP[s[0] as usize]] += 1;
+        for s_i in s.iter().take(sdist).skip(1) {
             // let r = (init_rank - Self::TRANSLATE_MAP[s[(i - 1)] as usize] * Self::SIGMA)
             //     * Self::SIGMA
             //     + Self::TRANSLATE_MAP[s[i + Self::Q - 1] as usize];
-            let r = Self::TRANSLATE_MAP[s[i] as usize];
+            let r = Self::TRANSLATE_MAP[*s_i as usize];
             ranking_profile[r] += 1;
-            init_rank = r;
         }
 
         Qgram { ranking_profile }
     }
 
-    pub fn dist(q1: &Qgram, q2: &Qgram, t: Option<usize>) -> usize {
-        let t = t.unwrap_or(usize::MAX);
-        let mut diffs = [0usize; 26];
+    pub fn dist(q1: &Qgram, q2: &Qgram) -> usize {
+        let mut diffs = [0u8; 26];
         // q1.ranking_profile
         //     .iter()
         //     .zip(q2.ranking_profile.iter())
@@ -84,7 +81,8 @@ impl Qgram {
         diffs[24] = q1.ranking_profile[24].abs_diff(q2.ranking_profile[24]);
         diffs[25] = q1.ranking_profile[25].abs_diff(q2.ranking_profile[25]);
 
-        diffs.iter().sum()
+        let sm: u8 = diffs.into_iter().sum();
+        sm as usize
     }
 
     #[inline(always)]

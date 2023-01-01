@@ -73,7 +73,7 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
     // println!("Input finished");
 
     // let start = Instant::now();
-    let srchgrams: Vec<Qgram> = srchdata.iter().map(|data| Qgram::new(data)).collect();
+    let srchgrams: Vec<Qgram> = srchdata.par_iter().map(|data| Qgram::new(data)).collect();
     // let srchgrams: Vec<Qgram> = handle.join().unwrap();
 
     // println!("Building Qgrams took: {} MS", start.elapsed().as_micros());
@@ -92,13 +92,14 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
                 let sum: usize = srchdata
                     .iter()
                     .enumerate()
-                    .filter(|(wid, _)| Qgram::dist(&srchgrams[*wid], &query_qgram, Some(t2)) <= t2)
+                    .filter(|(wid, _)| Qgram::dist(&srchgrams[*wid], &query_qgram) <= t2)
                     .map(|(id, word)| {
                         if word.len() > qwlen {
                             ukkonen(qwbytes, word, t + 1, id + 1)
                         } else {
                             ukkonen(word, qwbytes, t + 1, id + 1)
                         }
+                        // id + 1
                     })
                     .sum();
                 acc + sum
