@@ -1,6 +1,7 @@
 mod filters;
 mod ukkonen;
 
+use linereader::LineReader;
 use rayon::prelude::*;
 use std::env;
 use std::fs::File;
@@ -12,71 +13,36 @@ use ukkonen::ukkonen;
 
 use crate::filters::Qgram;
 
-fn read<R: Read>(reader: &mut BufReader<R>) {
+fn read<R: std::io::Read>(file: R) {
     // let start = Instant::now();
     let mut srchdata: Vec<Vec<u8>> = Vec::<Vec<u8>>::with_capacity(1024 * 1024 * 64);
     let mut querydata: Vec<(String, usize)> =
         Vec::<(String, usize)>::with_capacity(1024 * 1024 * 64);
-    let mut line = String::with_capacity(256);
     let srch_line = "[SEARCH]";
+    let srch_line_bytes = srch_line.as_bytes();
+    let mut reader = LineReader::with_capacity(5 * 1024 * 1024, file);
 
-    // let (sx, tx) = unbounded::<String>();
-
-    // let handle = std::thread::spawn(move || {
-    //     let mut qgrams: Vec<Qgram> = Vec::with_capacity(1024 * 1024);
-    //     loop {
-    //         if let Ok(msg) = tx.recv() {
-    //             if msg.eq_ignore_ascii_case(srch_line) {
-    //                 break qgrams;
-    //             }
-    //             // println!("Building qgram");
-    //             qgrams.push(Qgram::new(msg.as_bytes()));
-    //         }
-    //     }
-    // });
-    // read database words
-    while let Ok(bytes_read) = reader.read_line(&mut line) {
-        if bytes_read == 0 {
+    while let Some(line) = reader.next_line() {
+        let line = line.expect("read error");
+        let line = &line[0..line.len() - 1];
+        if line.eq_ignore_ascii_case(srch_line_bytes) {
             break;
         }
-        // remove newline
-        line.pop();
-        let line_clone = line.clone();
-        // sx.send(line_clone.clone())
-        //     .expect("Failed to send line as bytes");
-        if srch_line.eq_ignore_ascii_case(&line) {
-            break;
-        }
-
-        srchdata.push(line_clone.into_bytes());
-        line.clear();
+        srchdata.push(line.to_owned());
     }
 
-    line.clear();
-
-    while let Ok(bytes_read) = reader.read_line(&mut line) {
-        if bytes_read == 0 {
-            break;
-        }
-        line.pop();
-
-        let Some((query_word, t)) = line.split_once(',') else {
+    while let Some(line) = reader.next_line() {
+        let line = line.expect("read error");
+        let line = &line[0..line.len() - 1];
+        let simd_line = simdutf8::basic::from_utf8(line).unwrap();
+        let Some((query_word, t)) = simd_line.split_once(',') else {
             panic!("Cannot split!");
         };
         let t: usize = t.parse().unwrap();
         querydata.push((query_word.to_owned(), t));
-
-        line.clear();
     }
-    // let elapsed = start.elapsed();
-    // println!("Reading input took: {} MS", elapsed.as_millis());
-    // println!("Input finished");
 
-    // let start = Instant::now();
     let srchgrams: Vec<Qgram> = srchdata.par_iter().map(|data| Qgram::new(data)).collect();
-    // let srchgrams: Vec<Qgram> = handle.join().unwrap();
-
-    // println!("Building Qgrams took: {} MS", start.elapsed().as_micros());
 
     let sum: usize = querydata
         .par_iter()
@@ -106,29 +72,18 @@ fn read<R: Read>(reader: &mut BufReader<R>) {
             },
         )
         .sum();
-    // println!("Querying took: {} MS", start.elapsed().as_millis());
     println!("{}", sum);
     stdout().flush().unwrap();
 }
 
 fn main() {
-    // let s1 = "ACDF".to_owned();
-    // let s2 = "ABCD".to_owned();
-
-    // let q1 = Qgram::new(s1.as_bytes());
-    // let q2 = Qgram::new(s2.as_bytes());
-
-    // println!("{} {} {}", s1, s2, Qgram::dist(&q1, &q2));
-
     let args: Vec<String> = env::args().collect();
     let filename: &str;
     if args.len() > 1 {
         filename = &args[1];
         let file = File::open(filename).unwrap();
-        let mut reader = BufReader::new(file);
-        read(&mut reader);
+        read(file);
     } else {
-        let mut reader = BufReader::new(stdin().lock());
-        read(&mut reader);
+        read(stdin().lock());
     }
 }
