@@ -20,7 +20,7 @@ fn read<R: std::io::Read>(file: R) {
         Vec::<(String, usize)>::with_capacity(1024 * 1024 * 64);
     let srch_line = "[SEARCH]";
     let srch_line_bytes = srch_line.as_bytes();
-    let mut reader = LineReader::with_capacity(5 * 1024 * 1024, file);
+    let mut reader = LineReader::with_capacity(2 * 1024 * 1024, file);
 
     while let Some(line) = reader.next_line() {
         let line = line.expect("read error");
