@@ -2,20 +2,20 @@
 pub struct Qgram {
     // profile: Vec<&'a [u8]>,
     // ranking_profile: Vec<usize>,
-    ranking_profile: [u8; 52],
+    ranking_profile: [u8; 63],
 }
 
 impl Qgram {
     // SIZE of Q-gram
     const Q: usize = 1;
     // size of the alphabet
-    const SIGMA: usize = 52;
+    const SIGMA: usize = 63;
     // my ASCII alphabet translations
     const TRANSLATE_MAP: [usize; 256] = [
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 16
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 32
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 48
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 64
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 52, // 32
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 53, // 48
+        54, 55, 56, 57, 58, 59, 60, 61, 62, 0, 0, 0, 0, 0, 0, 0, // 64
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, // 80
         16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 0, 0, 0, 0, 0, 0, // 96
         0, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, // 112
@@ -49,40 +49,38 @@ impl Qgram {
     }
 
     pub fn dist(q1: &Qgram, q2: &Qgram) -> usize {
-        let mut diffs = [0u8; 26];
-        // q1.ranking_profile
-        //     .iter()
-        //     .zip(q2.ranking_profile.iter())
-        //     .fold(0, |accum, (d1, d2)| accum + d1.abs_diff(*d2))
-        diffs[0] = q1.ranking_profile[0].abs_diff(q2.ranking_profile[0]);
-        diffs[1] = q1.ranking_profile[1].abs_diff(q2.ranking_profile[1]);
-        diffs[2] = q1.ranking_profile[2].abs_diff(q2.ranking_profile[2]);
-        diffs[3] = q1.ranking_profile[3].abs_diff(q2.ranking_profile[3]);
-        diffs[4] = q1.ranking_profile[4].abs_diff(q2.ranking_profile[4]);
-        diffs[5] = q1.ranking_profile[5].abs_diff(q2.ranking_profile[5]);
-        diffs[6] = q1.ranking_profile[6].abs_diff(q2.ranking_profile[6]);
-        diffs[7] = q1.ranking_profile[7].abs_diff(q2.ranking_profile[7]);
-        diffs[8] = q1.ranking_profile[8].abs_diff(q2.ranking_profile[8]);
-        diffs[9] = q1.ranking_profile[9].abs_diff(q2.ranking_profile[9]);
-        diffs[10] = q1.ranking_profile[10].abs_diff(q2.ranking_profile[10]);
-        diffs[11] = q1.ranking_profile[11].abs_diff(q2.ranking_profile[11]);
-        diffs[12] = q1.ranking_profile[12].abs_diff(q2.ranking_profile[12]);
-        diffs[13] = q1.ranking_profile[13].abs_diff(q2.ranking_profile[13]);
-        diffs[14] = q1.ranking_profile[14].abs_diff(q2.ranking_profile[14]);
-        diffs[15] = q1.ranking_profile[15].abs_diff(q2.ranking_profile[15]);
-        diffs[16] = q1.ranking_profile[16].abs_diff(q2.ranking_profile[16]);
-        diffs[17] = q1.ranking_profile[17].abs_diff(q2.ranking_profile[17]);
-        diffs[18] = q1.ranking_profile[18].abs_diff(q2.ranking_profile[18]);
-        diffs[19] = q1.ranking_profile[19].abs_diff(q2.ranking_profile[19]);
-        diffs[20] = q1.ranking_profile[20].abs_diff(q2.ranking_profile[20]);
-        diffs[21] = q1.ranking_profile[21].abs_diff(q2.ranking_profile[21]);
-        diffs[22] = q1.ranking_profile[22].abs_diff(q2.ranking_profile[22]);
-        diffs[23] = q1.ranking_profile[23].abs_diff(q2.ranking_profile[23]);
-        diffs[24] = q1.ranking_profile[24].abs_diff(q2.ranking_profile[24]);
-        diffs[25] = q1.ranking_profile[25].abs_diff(q2.ranking_profile[25]);
-
-        let sm: u8 = diffs.into_iter().sum();
-        sm as usize
+        let d = q1
+            .ranking_profile
+            .iter()
+            .zip(q2.ranking_profile.iter())
+            .fold(0, |accum, (d1, d2)| accum + d1.abs_diff(*d2));
+        d as usize
+        // diffs[0] = q1.ranking_profile[0].abs_diff(q2.ranking_profile[0]);
+        // diffs[1] = q1.ranking_profile[1].abs_diff(q2.ranking_profile[1]);
+        // diffs[2] = q1.ranking_profile[2].abs_diff(q2.ranking_profile[2]);
+        // diffs[3] = q1.ranking_profile[3].abs_diff(q2.ranking_profile[3]);
+        // diffs[4] = q1.ranking_profile[4].abs_diff(q2.ranking_profile[4]);
+        // diffs[5] = q1.ranking_profile[5].abs_diff(q2.ranking_profile[5]);
+        // diffs[6] = q1.ranking_profile[6].abs_diff(q2.ranking_profile[6]);
+        // diffs[7] = q1.ranking_profile[7].abs_diff(q2.ranking_profile[7]);
+        // diffs[8] = q1.ranking_profile[8].abs_diff(q2.ranking_profile[8]);
+        // diffs[9] = q1.ranking_profile[9].abs_diff(q2.ranking_profile[9]);
+        // diffs[10] = q1.ranking_profile[10].abs_diff(q2.ranking_profile[10]);
+        // diffs[11] = q1.ranking_profile[11].abs_diff(q2.ranking_profile[11]);
+        // diffs[12] = q1.ranking_profile[12].abs_diff(q2.ranking_profile[12]);
+        // diffs[13] = q1.ranking_profile[13].abs_diff(q2.ranking_profile[13]);
+        // diffs[14] = q1.ranking_profile[14].abs_diff(q2.ranking_profile[14]);
+        // diffs[15] = q1.ranking_profile[15].abs_diff(q2.ranking_profile[15]);
+        // diffs[16] = q1.ranking_profile[16].abs_diff(q2.ranking_profile[16]);
+        // diffs[17] = q1.ranking_profile[17].abs_diff(q2.ranking_profile[17]);
+        // diffs[18] = q1.ranking_profile[18].abs_diff(q2.ranking_profile[18]);
+        // diffs[19] = q1.ranking_profile[19].abs_diff(q2.ranking_profile[19]);
+        // diffs[20] = q1.ranking_profile[20].abs_diff(q2.ranking_profile[20]);
+        // diffs[21] = q1.ranking_profile[21].abs_diff(q2.ranking_profile[21]);
+        // diffs[22] = q1.ranking_profile[22].abs_diff(q2.ranking_profile[22]);
+        // diffs[23] = q1.ranking_profile[23].abs_diff(q2.ranking_profile[23]);
+        // diffs[24] = q1.ranking_profile[24].abs_diff(q2.ranking_profile[24]);
+        // diffs[25] = q1.ranking_profile[25].abs_diff(q2.ranking_profile[25]);
     }
 
     #[inline(always)]
