@@ -13,11 +13,6 @@ use ukkonen::ukkonen;
 
 use crate::filters::Qgram;
 
-use mimalloc::MiMalloc;
-
-#[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
-
 fn read<R: std::io::Read>(file: R) {
     // let start = Instant::now();
     let mut srchdata: Vec<Vec<u8>> = Vec::<Vec<u8>>::with_capacity(1024 * 1024 * 64);
