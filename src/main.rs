@@ -71,7 +71,7 @@ fn read<R: std::io::Read>(file: R) {
                     let t2 = *t * 2;
 
                     let sum: usize = srchdata
-                        .iter()
+                        .par_iter()
                         .enumerate()
                         .filter(|(wid, _)| DNAQgram::dist(&srchgrams[*wid], &query_qgram) <= t2)
                         .map(|(id, word)| {
@@ -101,7 +101,7 @@ fn read<R: std::io::Read>(file: R) {
                     let t2 = *t * 2;
 
                     let sum: usize = srchdata
-                        .iter()
+                        .par_iter()
                         .enumerate()
                         .filter(|(wid, _)| Qgram::dist(&srchgrams[*wid], &query_qgram) <= t2)
                         .map(|(id, word)| {
