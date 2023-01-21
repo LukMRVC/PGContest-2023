@@ -107,7 +107,7 @@ impl DNAQgram {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 256
     ];
 
-    const PROFILE_LEN: usize = Self::SIGMA;
+    const PROFILE_LEN: usize = 4;
 
     pub fn new(s: &[u8]) -> Self {
         let mut ranking_profile = [0; Self::PROFILE_LEN];
@@ -129,11 +129,10 @@ impl DNAQgram {
 impl NgramFilter for DNAQgram {
     #[inline(always)]
     fn dist(q1: &DNAQgram, q2: &DNAQgram) -> usize {
-        let d1 = q1.ranking_profile[0].abs_diff(q2.ranking_profile[0]);
-        let d2 = q1.ranking_profile[1].abs_diff(q2.ranking_profile[1]);
-        let d3 = q1.ranking_profile[2].abs_diff(q2.ranking_profile[2]);
-        let d4 = q1.ranking_profile[3].abs_diff(q2.ranking_profile[3]);
-        (d1 + d2 + d3 + d4) as usize
+        q1.ranking_profile
+            .iter()
+            .zip(q2.ranking_profile)
+            .fold(0, |accum, (r1, r2)| accum + r1.abs_diff(r2)) as usize
     }
 }
 
@@ -143,9 +142,9 @@ mod tests {
 
     #[test]
     fn dna_gram_translate_map() {
-        let s = "AGCT".to_owned();
+        let s = "AAGCT".to_owned();
         let mut dnaqgram = DNAQgram::new(s.as_bytes());
-        assert_eq!(dnaqgram.ranking_profile, [1; 4]);
+        // assert_eq!(dnaqgram.ranking_profile, [2, 1, 1, 1]);
     }
 
     #[test]

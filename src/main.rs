@@ -32,7 +32,7 @@ fn read<R: std::io::Read>(file: R) {
         srchdata.push(line.to_owned());
     }
 
-    'outer: for srchline in srchdata.iter().take(2) {
+    'outer: for srchline in srchdata.iter().take(5) {
         for char_byte in srchline.iter() {
             if char_byte != &65 && char_byte != &67 && char_byte != &71 && char_byte != &84 {
                 is_dna = false;
