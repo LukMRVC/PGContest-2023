@@ -1,3 +1,7 @@
+pub trait NgramFilter {
+    fn dist(q1: &Self, q2: &Self) -> usize;
+}
+
 #[derive(Debug, Clone)]
 pub struct Qgram {
     // profile: Vec<&'a [u8]>,
@@ -48,41 +52,6 @@ impl Qgram {
         Qgram { ranking_profile }
     }
 
-    pub fn dist(q1: &Qgram, q2: &Qgram) -> usize {
-        let d = q1
-            .ranking_profile
-            .iter()
-            .zip(q2.ranking_profile.iter())
-            .fold(0, |accum, (d1, d2)| accum + d1.abs_diff(*d2));
-        d as usize
-        // diffs[0] = q1.ranking_profile[0].abs_diff(q2.ranking_profile[0]);
-        // diffs[1] = q1.ranking_profile[1].abs_diff(q2.ranking_profile[1]);
-        // diffs[2] = q1.ranking_profile[2].abs_diff(q2.ranking_profile[2]);
-        // diffs[3] = q1.ranking_profile[3].abs_diff(q2.ranking_profile[3]);
-        // diffs[4] = q1.ranking_profile[4].abs_diff(q2.ranking_profile[4]);
-        // diffs[5] = q1.ranking_profile[5].abs_diff(q2.ranking_profile[5]);
-        // diffs[6] = q1.ranking_profile[6].abs_diff(q2.ranking_profile[6]);
-        // diffs[7] = q1.ranking_profile[7].abs_diff(q2.ranking_profile[7]);
-        // diffs[8] = q1.ranking_profile[8].abs_diff(q2.ranking_profile[8]);
-        // diffs[9] = q1.ranking_profile[9].abs_diff(q2.ranking_profile[9]);
-        // diffs[10] = q1.ranking_profile[10].abs_diff(q2.ranking_profile[10]);
-        // diffs[11] = q1.ranking_profile[11].abs_diff(q2.ranking_profile[11]);
-        // diffs[12] = q1.ranking_profile[12].abs_diff(q2.ranking_profile[12]);
-        // diffs[13] = q1.ranking_profile[13].abs_diff(q2.ranking_profile[13]);
-        // diffs[14] = q1.ranking_profile[14].abs_diff(q2.ranking_profile[14]);
-        // diffs[15] = q1.ranking_profile[15].abs_diff(q2.ranking_profile[15]);
-        // diffs[16] = q1.ranking_profile[16].abs_diff(q2.ranking_profile[16]);
-        // diffs[17] = q1.ranking_profile[17].abs_diff(q2.ranking_profile[17]);
-        // diffs[18] = q1.ranking_profile[18].abs_diff(q2.ranking_profile[18]);
-        // diffs[19] = q1.ranking_profile[19].abs_diff(q2.ranking_profile[19]);
-        // diffs[20] = q1.ranking_profile[20].abs_diff(q2.ranking_profile[20]);
-        // diffs[21] = q1.ranking_profile[21].abs_diff(q2.ranking_profile[21]);
-        // diffs[22] = q1.ranking_profile[22].abs_diff(q2.ranking_profile[22]);
-        // diffs[23] = q1.ranking_profile[23].abs_diff(q2.ranking_profile[23]);
-        // diffs[24] = q1.ranking_profile[24].abs_diff(q2.ranking_profile[24]);
-        // diffs[25] = q1.ranking_profile[25].abs_diff(q2.ranking_profile[25]);
-    }
-
     #[inline(always)]
     fn rank2(slice: &[u8]) -> usize {
         // for Q = 2;
@@ -95,5 +64,115 @@ impl Qgram {
         Self::TRANSLATE_MAP[slice[0] as usize] * (Self::SIGMA * Self::SIGMA)
             + Self::TRANSLATE_MAP[slice[1] as usize] * Self::SIGMA
             + Self::TRANSLATE_MAP[slice[2] as usize]
+    }
+}
+
+impl NgramFilter for Qgram {
+    fn dist(q1: &Qgram, q2: &Qgram) -> usize {
+        let d = q1
+            .ranking_profile
+            .iter()
+            .zip(q2.ranking_profile.iter())
+            .fold(0, |accum, (d1, d2)| accum + d1.abs_diff(*d2));
+        d as usize
+    }
+}
+
+pub struct DNAQgram {
+    ranking_profile: [u8; 4],
+}
+
+impl DNAQgram {
+    // SIZE of Q-gram
+    const Q: usize = 1;
+    // size of the alphabet
+    const SIGMA: usize = 4;
+    // my ASCII alphabet translations
+    const TRANSLATE_MAP: [usize; 256] = [
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 16
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 32
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 48
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 64
+        0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, // 80
+        0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 96
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 112
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 128
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 144
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 160
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 176
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 192
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 208
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 224
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 240
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 256
+    ];
+
+    const PROFILE_LEN: usize = Self::SIGMA;
+
+    pub fn new(s: &[u8]) -> Self {
+        let mut ranking_profile = [0; Self::PROFILE_LEN];
+        let sdist = s.len() - Self::Q + 1;
+        // let mut init_rank = Self::rank2(&s[0..Self::Q]);
+        ranking_profile[Self::TRANSLATE_MAP[s[0] as usize]] += 1;
+        for s_i in s.iter().take(sdist).skip(1) {
+            // let r = (init_rank - Self::TRANSLATE_MAP[s[(i - 1)] as usize] * Self::SIGMA)
+            //     * Self::SIGMA
+            //     + Self::TRANSLATE_MAP[s[i + Self::Q - 1] as usize];
+            let r = Self::TRANSLATE_MAP[*s_i as usize];
+            ranking_profile[r] += 1;
+        }
+
+        DNAQgram { ranking_profile }
+    }
+}
+
+impl NgramFilter for DNAQgram {
+    #[inline(always)]
+    fn dist(q1: &DNAQgram, q2: &DNAQgram) -> usize {
+        let d1 = q1.ranking_profile[0].abs_diff(q2.ranking_profile[0]);
+        let d2 = q1.ranking_profile[1].abs_diff(q2.ranking_profile[1]);
+        let d3 = q1.ranking_profile[2].abs_diff(q2.ranking_profile[2]);
+        let d4 = q1.ranking_profile[3].abs_diff(q2.ranking_profile[3]);
+        (d1 + d2 + d3 + d4) as usize
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dna_gram_translate_map() {
+        let s = "AGCT".to_owned();
+        let mut dnaqgram = DNAQgram::new(s.as_bytes());
+        assert_eq!(dnaqgram.ranking_profile, [1; 4]);
+    }
+
+    #[test]
+    fn recognizes_dna_alphabet() {
+        let s = "AGCT".to_owned();
+        let s = s.into_bytes();
+
+        let mut is_dna = true;
+        for char_byte in s.iter() {
+            if char_byte != &65 && char_byte != &67 && char_byte != &71 && char_byte != &84 {
+                is_dna = false;
+                break;
+            }
+        }
+
+        assert_eq!(is_dna, true);
+
+        let s = "AGCV".to_owned();
+        let s = s.into_bytes();
+
+        let mut is_dna = true;
+        for char_byte in s.iter() {
+            if char_byte != &65 && char_byte != &67 && char_byte != &71 && char_byte != &84 {
+                is_dna = false;
+                break;
+            }
+        }
+        assert_eq!(is_dna, false);
     }
 }

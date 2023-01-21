@@ -11,7 +11,7 @@ use std::time::Instant;
 use crossbeam_channel::unbounded;
 use ukkonen::ukkonen;
 
-use crate::filters::Qgram;
+use crate::filters::{DNAQgram, NgramFilter, Qgram};
 
 fn read<R: std::io::Read>(file: R) {
     // let start = Instant::now();
@@ -21,6 +21,7 @@ fn read<R: std::io::Read>(file: R) {
     let srch_line = "[SEARCH]";
     let srch_line_bytes = srch_line.as_bytes();
     let mut reader = LineReader::with_capacity(1024 * 1024, file);
+    let mut is_dna: bool = true;
 
     while let Some(line) = reader.next_line() {
         let line = line.expect("read error");
@@ -29,6 +30,15 @@ fn read<R: std::io::Read>(file: R) {
             break;
         }
         srchdata.push(line.to_owned());
+    }
+
+    'outer: for srchline in srchdata.iter().take(2) {
+        for char_byte in srchline.iter() {
+            if char_byte != &65 && char_byte != &67 && char_byte != &71 && char_byte != &84 {
+                is_dna = false;
+                break 'outer;
+            }
+        }
     }
 
     while let Some(line) = reader.next_line() {
@@ -42,36 +52,73 @@ fn read<R: std::io::Read>(file: R) {
         querydata.push((query_word.to_owned(), t));
     }
 
-    let srchgrams: Vec<Qgram> = srchdata.par_iter().map(|data| Qgram::new(data)).collect();
+    let mut sum: usize = 0;
 
-    let sum: usize = querydata
-        .par_iter()
-        .fold(
-            || 0usize,
-            |acc, (query_word, t)| {
-                // let mut sum = 0;
-                let qwlen = query_word.len();
-                let qwbytes = query_word.as_bytes();
-                let query_qgram = Qgram::new(qwbytes);
-                let t2 = *t * 2;
+    if is_dna {
+        let srchgrams: Vec<DNAQgram> = srchdata
+            .par_iter()
+            .map(|data| DNAQgram::new(data))
+            .collect();
+        sum = querydata
+            .par_iter()
+            .fold(
+                || 0usize,
+                |acc, (query_word, t)| {
+                    // let mut sum = 0;
+                    let qwlen = query_word.len();
+                    let qwbytes = query_word.as_bytes();
+                    let query_qgram = DNAQgram::new(qwbytes);
+                    let t2 = *t * 2;
 
-                let sum: usize = srchdata
-                    .iter()
-                    .enumerate()
-                    .filter(|(wid, _)| Qgram::dist(&srchgrams[*wid], &query_qgram) <= t2)
-                    .map(|(id, word)| {
-                        if word.len() > qwlen {
-                            ukkonen(qwbytes, word, t + 1, id + 1)
-                        } else {
-                            ukkonen(word, qwbytes, t + 1, id + 1)
-                        }
-                        // id + 1
-                    })
-                    .sum();
-                acc + sum
-            },
-        )
-        .sum();
+                    let sum: usize = srchdata
+                        .iter()
+                        .enumerate()
+                        .filter(|(wid, _)| DNAQgram::dist(&srchgrams[*wid], &query_qgram) <= t2)
+                        .map(|(id, word)| {
+                            if word.len() > qwlen {
+                                ukkonen(qwbytes, word, t + 1, id + 1)
+                            } else {
+                                ukkonen(word, qwbytes, t + 1, id + 1)
+                            }
+                            // id + 1
+                        })
+                        .sum();
+                    acc + sum
+                },
+            )
+            .sum();
+    } else {
+        let srchgrams: Vec<Qgram> = srchdata.par_iter().map(|data| Qgram::new(data)).collect();
+        sum = querydata
+            .par_iter()
+            .fold(
+                || 0usize,
+                |acc, (query_word, t)| {
+                    // let mut sum = 0;
+                    let qwlen = query_word.len();
+                    let qwbytes = query_word.as_bytes();
+                    let query_qgram = Qgram::new(qwbytes);
+                    let t2 = *t * 2;
+
+                    let sum: usize = srchdata
+                        .iter()
+                        .enumerate()
+                        .filter(|(wid, _)| Qgram::dist(&srchgrams[*wid], &query_qgram) <= t2)
+                        .map(|(id, word)| {
+                            if word.len() > qwlen {
+                                ukkonen(qwbytes, word, t + 1, id + 1)
+                            } else {
+                                ukkonen(word, qwbytes, t + 1, id + 1)
+                            }
+                            // id + 1
+                        })
+                        .sum();
+                    acc + sum
+                },
+            )
+            .sum();
+    }
+
     println!("{}", sum);
     stdout().flush().unwrap();
 }
