@@ -11,7 +11,7 @@ use std::time::Instant;
 use crossbeam_channel::unbounded;
 use ukkonen::ukkonen;
 
-use crate::filters::{DNAQgram, NgramFilter, Qgram};
+use crate::filters::{DNAQGramFilter::DNAQgram, NgramFilter, QGramFilter::Qgram};
 
 fn read<R: std::io::Read>(file: R) {
     // let start = Instant::now();
@@ -73,6 +73,7 @@ fn read<R: std::io::Read>(file: R) {
                     let sum: usize = srchdata
                         .par_iter()
                         .enumerate()
+                        .filter(|(wid, _)| &srchgrams[*wid].str_len.abs_diff(qwlen) <= t)
                         .filter(|(wid, _)| DNAQgram::dist(&srchgrams[*wid], &query_qgram) <= t2)
                         .map(|(id, word)| {
                             if word.len() > qwlen {
@@ -103,6 +104,7 @@ fn read<R: std::io::Read>(file: R) {
                     let sum: usize = srchdata
                         .par_iter()
                         .enumerate()
+                        .filter(|(wid, _)| &srchgrams[*wid].str_len.abs_diff(qwlen) <= t)
                         .filter(|(wid, _)| Qgram::dist(&srchgrams[*wid], &query_qgram) <= t2)
                         .map(|(id, word)| {
                             if word.len() > qwlen {

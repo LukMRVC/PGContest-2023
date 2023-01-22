@@ -1,8 +1,8 @@
 use super::NgramFilter;
-use rayon::prelude::*;
 
 pub struct DNAQgram {
-    ranking_profiles: Vec<u8>,
+    pub str_len: usize,
+    ranking_profile: [u8; 4],
 }
 
 impl DNAQgram {
@@ -32,11 +32,23 @@ impl DNAQgram {
 
     const PROFILE_LEN: usize = Self::SIGMA;
 
-    pub fn new(s: &Vec<Vec<u8>>) -> Self {
-        let mut ranking_profiles = Vec::with_capacity(s.len() * 4);
-        for chunk in ranking_profiles.par_iter(4) {}
+    pub fn new(s: &[u8]) -> Self {
+        let mut ranking_profile = [0; Self::PROFILE_LEN];
+        let sdist = s.len() - Self::Q + 1;
+        // let mut init_rank = Self::rank2(&s[0..Self::Q]);
+        ranking_profile[Self::TRANSLATE_MAP[s[0] as usize]] += 1;
+        for s_i in s.iter().take(sdist).skip(1) {
+            // let r = (init_rank - Self::TRANSLATE_MAP[s[(i - 1)] as usize] * Self::SIGMA)
+            //     * Self::SIGMA
+            //     + Self::TRANSLATE_MAP[s[i + Self::Q - 1] as usize];
+            let r = Self::TRANSLATE_MAP[*s_i as usize];
+            ranking_profile[r] += 1;
+        }
 
-        DNAQgram { ranking_profiles }
+        DNAQgram {
+            str_len: s.len(),
+            ranking_profile,
+        }
     }
 }
 

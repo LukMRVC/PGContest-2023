@@ -2,8 +2,7 @@ use super::NgramFilter;
 
 #[derive(Debug, Clone)]
 pub struct Qgram {
-    // profile: Vec<&'a [u8]>,
-    // ranking_profile: Vec<usize>,
+    pub str_len: usize,
     ranking_profile: [u8; 63],
 }
 
@@ -47,7 +46,10 @@ impl Qgram {
             ranking_profile[r] += 1;
         }
 
-        Qgram { ranking_profile }
+        Qgram {
+            str_len: s.len(),
+            ranking_profile,
+        }
     }
 
     #[inline(always)]
