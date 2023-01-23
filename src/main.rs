@@ -13,12 +13,23 @@ use ukkonen::ukkonen;
 
 use crate::filters::{DNAQGramFilter::DNAQgram, NgramFilter, QGramFilter::Qgram};
 
+#[inline(always)]
+fn ukkonen_map(id: usize, word: &[u8], qwlen: usize, qwbytes: &[u8], threshold: usize) -> usize {
+    if word.len() > qwlen {
+        ukkonen(qwbytes, word, threshold, id)
+    } else {
+        ukkonen(word, qwbytes, threshold, id)
+    }
+}
+
 fn read<R: std::io::Read>(file: R) {
     // let start = Instant::now();
     let mut srchdata: Vec<Vec<u8>> = Vec::<Vec<u8>>::with_capacity(1024 * 1024 * 64);
     let mut querydata: Vec<(String, usize)> =
         Vec::<(String, usize)>::with_capacity(1024 * 1024 * 64);
     let srch_line = "[SEARCH]";
+    let srch_last_symbol = 93u8;
+    let comma_byte = 44u8;
     let srch_line_bytes = srch_line.as_bytes();
     let mut reader = LineReader::with_capacity(1024 * 1024, file);
     let mut is_dna: bool = true;
@@ -71,18 +82,11 @@ fn read<R: std::io::Read>(file: R) {
                     let t2 = *t * 2;
 
                     let sum: usize = srchdata
-                        .par_iter()
+                        .iter()
                         .enumerate()
                         .filter(|(wid, _)| &srchgrams[*wid].str_len.abs_diff(qwlen) <= t)
                         .filter(|(wid, _)| DNAQgram::dist(&srchgrams[*wid], &query_qgram) <= t2)
-                        .map(|(id, word)| {
-                            if word.len() > qwlen {
-                                ukkonen(qwbytes, word, t + 1, id + 1)
-                            } else {
-                                ukkonen(word, qwbytes, t + 1, id + 1)
-                            }
-                            // id + 1
-                        })
+                        .map(|(id, word)| ukkonen_map(id + 1, word, qwlen, qwbytes, t + 1))
                         .sum();
                     acc + sum
                 },
@@ -102,7 +106,7 @@ fn read<R: std::io::Read>(file: R) {
                     let t2 = *t * 2;
 
                     let sum: usize = srchdata
-                        .par_iter()
+                        .iter()
                         .enumerate()
                         .filter(|(wid, _)| &srchgrams[*wid].str_len.abs_diff(qwlen) <= t)
                         .filter(|(wid, _)| Qgram::dist(&srchgrams[*wid], &query_qgram) <= t2)
