@@ -69,7 +69,7 @@ mod tests {
     #[test]
     fn dna_gram_translate_map() {
         let s = "AAGCT".to_owned();
-        let mut dnaqgram = DNAQgram::new(s.as_bytes());
+        let dnaqgram = DNAQgram::new(s.as_bytes());
         assert_eq!(dnaqgram.ranking_profile, [2, 1, 1, 1]);
     }
 

@@ -1,17 +1,22 @@
 mod filters;
+mod macros;
+mod statistics;
 mod ukkonen;
 
 use linereader::LineReader;
 use rayon::prelude::*;
 use std::env;
 use std::fs::File;
-use std::io::{prelude::*, stdin, stdout, BufReader};
-use std::time::Instant;
+use std::io::{prelude::*, stdin, stdout};
 
-use crossbeam_channel::unbounded;
 use ukkonen::ukkonen;
 
-use crate::filters::{DNAQGramFilter::DNAQgram, NgramFilter, QGramFilter::Qgram};
+use crate::filters::{
+    dnaqgram_filter::DNAQgram,
+    qgram_filter::Qgram,
+    true_match_filter::{ngrams, TrueMatchFilter},
+    NgramFilter,
+};
 
 #[inline(always)]
 fn ukkonen_map(id: usize, word: &[u8], qwlen: usize, qwbytes: &[u8], threshold: usize) -> usize {
@@ -22,17 +27,34 @@ fn ukkonen_map(id: usize, word: &[u8], qwlen: usize, qwbytes: &[u8], threshold: 
     }
 }
 
+// ngrams and nchunks size
+const N: usize = 5;
+
+#[inline(always)]
+fn record_to_chunk_filter(record: &mut Vec<u8>) -> TrueMatchFilter {
+    if record.len() % N != 0 {
+        record.extend(vec![b'$'; N - (record.len() % N)]);
+    }
+    TrueMatchFilter::new(record, N)
+}
+
+#[inline(always)]
+fn record_to_ngrams(record: &mut String) -> Vec<(i32, usize)> {
+    let padding = String::from_utf8(vec![b'$'; N - 1]).unwrap();
+    record.push_str(&padding);
+    ngrams(record.as_bytes(), N)
+}
+
 fn read<R: std::io::Read>(file: R) {
     // let start = Instant::now();
     let mut srchdata: Vec<Vec<u8>> = Vec::<Vec<u8>>::with_capacity(1024 * 1024 * 64);
     let mut querydata: Vec<(String, usize)> =
         Vec::<(String, usize)>::with_capacity(1024 * 1024 * 64);
     let srch_line = "[SEARCH]";
-    let srch_last_symbol = 93u8;
-    let comma_byte = 44u8;
     let srch_line_bytes = srch_line.as_bytes();
     let mut reader = LineReader::with_capacity(1024 * 1024, file);
     let mut is_dna: bool = true;
+    let mut len_sum = 0;
 
     while let Some(line) = reader.next_line() {
         let line = line.expect("read error");
@@ -41,6 +63,7 @@ fn read<R: std::io::Read>(file: R) {
             break;
         }
         srchdata.push(line.to_owned());
+        len_sum += line.len();
     }
 
     'outer: for srchline in srchdata.iter().take(5) {
@@ -51,6 +74,10 @@ fn read<R: std::io::Read>(file: R) {
             }
         }
     }
+
+    // let mean_record_length = (len_sum as f32) / (srchdata.len() as f32);
+    // let srchdata_lenghts: Vec<usize> = srchdata.par_iter().map(|line| line.len()).collect();
+    // let deviation = statistics::std_dev(&srchdata_lenghts, data_mean);
 
     while let Some(line) = reader.next_line() {
         let line = line.expect("read error");
@@ -66,63 +93,15 @@ fn read<R: std::io::Read>(file: R) {
     let mut sum: usize = 0;
 
     if is_dna {
-        let srchgrams: Vec<DNAQgram> = srchdata
-            .par_iter()
-            .map(|data| DNAQgram::new(data))
-            .collect();
-        sum = querydata
-            .par_iter()
-            .fold(
-                || 0usize,
-                |acc, (query_word, t)| {
-                    // let mut sum = 0;
-                    let qwlen = query_word.len();
-                    let qwbytes = query_word.as_bytes();
-                    let query_qgram = DNAQgram::new(qwbytes);
-                    let t2 = *t * 2;
-
-                    let sum: usize = srchdata
-                        .iter()
-                        .enumerate()
-                        .filter(|(wid, _)| &srchgrams[*wid].str_len.abs_diff(qwlen) <= t)
-                        .filter(|(wid, _)| DNAQgram::dist(&srchgrams[*wid], &query_qgram) <= t2)
-                        .map(|(id, word)| ukkonen_map(id + 1, word, qwlen, qwbytes, t + 1))
-                        .sum();
-                    acc + sum
-                },
-            )
-            .sum();
+        sum = macros::filtering!(
+            querydata,
+            srchdata,
+            DNAQgram,
+            srchdata.len() >= 250_000 || querydata.len() > 150,
+            false
+        );
     } else {
-        let srchgrams: Vec<Qgram> = srchdata.par_iter().map(|data| Qgram::new(data)).collect();
-        sum = querydata
-            .par_iter()
-            .fold(
-                || 0usize,
-                |acc, (query_word, t)| {
-                    // let mut sum = 0;
-                    let qwlen = query_word.len();
-                    let qwbytes = query_word.as_bytes();
-                    let query_qgram = Qgram::new(qwbytes);
-                    let t2 = *t * 2;
-
-                    let sum: usize = srchdata
-                        .iter()
-                        .enumerate()
-                        .filter(|(wid, _)| &srchgrams[*wid].str_len.abs_diff(qwlen) <= t)
-                        .filter(|(wid, _)| Qgram::dist(&srchgrams[*wid], &query_qgram) <= t2)
-                        .map(|(id, word)| {
-                            if word.len() > qwlen {
-                                ukkonen(qwbytes, word, t + 1, id + 1)
-                            } else {
-                                ukkonen(word, qwbytes, t + 1, id + 1)
-                            }
-                            // id + 1
-                        })
-                        .sum();
-                    acc + sum
-                },
-            )
-            .sum();
+        sum = macros::filtering!(querydata, srchdata, Qgram, false, true);
     }
 
     println!("{}", sum);
