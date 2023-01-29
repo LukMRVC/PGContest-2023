@@ -130,8 +130,7 @@ macro_rules! filtering {
         let mut query_ngrams: Vec<Vec<(i32, usize)>> = vec![];
         if $use_true_match {
             true_filter_chunks = $srchdata
-                .clone()
-                .par_iter_mut()
+                .par_iter()
                 .map(|record| record_to_chunk_filter(record))
                 .collect();
 

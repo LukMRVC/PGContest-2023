@@ -31,10 +31,7 @@ fn ukkonen_map(id: usize, word: &[u8], qwlen: usize, qwbytes: &[u8], threshold: 
 const N: usize = 5;
 
 #[inline(always)]
-fn record_to_chunk_filter(record: &mut Vec<u8>) -> TrueMatchFilter {
-    if record.len() % N != 0 {
-        record.extend(vec![b'$'; N - (record.len() % N)]);
-    }
+fn record_to_chunk_filter(record: &Vec<u8>) -> TrueMatchFilter {
     TrueMatchFilter::new(record, N)
 }
 
@@ -101,7 +98,7 @@ fn read<R: std::io::Read>(file: R) {
             false
         );
     } else {
-        sum = macros::filtering!(querydata, srchdata, Qgram, true, true);
+        sum = macros::filtering!(querydata, srchdata, Qgram, false, true);
     }
 
     println!("{}", sum);
