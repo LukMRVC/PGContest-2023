@@ -28,7 +28,7 @@ fn ukkonen_map(id: usize, word: &[u8], qwlen: usize, qwbytes: &[u8], threshold: 
 }
 
 // ngrams and nchunks size
-const N: usize = 3;
+const N: usize = 5;
 
 #[inline(always)]
 fn record_to_chunk_filter(record: &mut Vec<u8>) -> TrueMatchFilter {
