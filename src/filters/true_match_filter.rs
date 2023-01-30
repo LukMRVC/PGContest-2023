@@ -33,12 +33,13 @@ fn nchunks(doc: &[u8], n: usize) -> Vec<(i32, usize)> {
         let padding = n - last_slice.len() - 1;
         let mut ranking = 0;
         for (i, c) in last_slice.iter().enumerate() {
-            ranking += TRANSLATE_MAP[*c as usize] * ALPHABET_SIZE.pow((n - i - 1) as u32);
+            ranking += TRANSLATE_MAP[*c as usize] * (ALPHABET_SIZE.pow((n - i - 1) as u32));
         }
 
-        for i in padding..=0 {
-            ranking += TRANSLATE_MAP[b'$' as usize] * ALPHABET_SIZE.pow(i as u32);
+        for i in (0..=padding).rev() {
+            ranking += TRANSLATE_MAP[b'$' as usize] * (ALPHABET_SIZE.pow(i as u32));
         }
+
         chunks.push((ranking, (total_chunks - 1) * n));
     } else {
         chunks.push((rank(last_slice, n), doc.len() - n));
@@ -203,6 +204,15 @@ mod tests {
     }
 
     #[test]
+    fn chunks_ranking_is_good_5() {
+        let dna = "AAAAAAAAAA".to_owned();
+        assert_eq!(TRANSLATE_MAP[b'A' as usize], 1);
+        let chunks = nchunks(dna.as_bytes(), 4);
+
+        assert_eq!(chunks, vec![(266_305, 0), (266_305, 4), (270_335, 8)]);
+    }
+
+    #[test]
     fn extracted_ngrams_with_padding() {
         let mut record = String::from("ACCGTAA");
         let n = 5;
@@ -241,13 +251,6 @@ mod tests {
             &[b'A', b'$', b'$', b'$', b'$']
         );
         assert_eq!(gram_windows.next().is_none(), true);
-    }
-
-    #[test]
-    fn ngrams_ranking_without_padding() {
-        let mut record = String::from("ACCGT");
-        let n = 3;
-        let grams = ngrams(record.as_bytes(), n);
     }
 
     #[test]
