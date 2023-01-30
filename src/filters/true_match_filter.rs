@@ -125,13 +125,11 @@ impl TrueMatchFilter {
                     }
                     continue;
                 }
-            } else {
-                if last_idx_start == usize::MAX {
-                    mismatches += 1;
-                    if mismatches > self.chunks.len() - lb {
-                        match_set.clear();
-                        return false;
-                    }
+            } else if last_idx_start == usize::MAX {
+                mismatches += 1;
+                if mismatches > self.chunks.len() - lb {
+                    match_set.clear();
+                    return false;
                 }
                 continue;
             }
