@@ -100,24 +100,43 @@ impl TrueMatchFilter {
         let lb = self.lbstr.saturating_sub(threshold);
         let mut mismatches = 0;
 
-        // let mut hashmap_cache = FxHashMap::default();
+        let mut last_chunk = 0;
+        let mut last_idx_start = 0;
+        let mut match_idx = 0;
 
         for (chunk, chunk_pos) in self.chunks.iter() {
-            let mut match_idx = 0;
-            let srch_res = ngram_list.binary_search_by_key(chunk, |&(a, _)| a);
-            if let Ok(mut srch_idx) = srch_res {
-                while srch_idx > 0 && ngram_list[srch_idx - 1].0 == *chunk {
-                    srch_idx -= 1;
+            if last_chunk != *chunk {
+                last_chunk = *chunk;
+
+                let srch_res = ngram_list.binary_search_by_key(chunk, |&(a, _)| a);
+                if let Ok(mut srch_idx) = srch_res {
+                    while srch_idx > 0 && ngram_list[srch_idx - 1].0 == *chunk {
+                        srch_idx -= 1;
+                    }
+                    last_idx_start = srch_idx;
+                } else {
+                    last_idx_start = usize::MAX;
+
+                    // I can insert usize::MAX since I know that strings are of limited length
+                    mismatches += 1;
+                    if mismatches > self.chunks.len() - lb {
+                        match_set.clear();
+                        return false;
+                    }
+                    continue;
                 }
-                match_idx = srch_idx;
             } else {
-                // I can insert usize::MAX since I know that strings are of limited length
-                mismatches += 1;
-                if mismatches > self.chunks.len() - lb {
-                    match_set.clear();
-                    return false;
+                if last_idx_start == usize::MAX {
+                    mismatches += 1;
+                    if mismatches > self.chunks.len() - lb {
+                        match_set.clear();
+                        return false;
+                    }
                 }
+                continue;
             }
+
+            match_idx = last_idx_start;
 
             let (mut match_ngram, mut ngram_pos) =
                 (ngram_list[match_idx].0, ngram_list[match_idx].1);
