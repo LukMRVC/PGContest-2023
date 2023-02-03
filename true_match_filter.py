@@ -61,9 +61,11 @@ SIGMA = 63
 
 
 class TrueMatchFilter:
-    def __init__(self, n: int, doc: str):
+    def __init__(self, n: int, doc: str, _id: int):
+        self.id = _id
         self.n = n
         self.chunks = []
+        self.str_len = len(doc)
         self.lbstr = ceil(len(doc) / n)
         self.chunks = nchunkify(doc, n)
         
@@ -161,61 +163,33 @@ def ngramify(doc: str, n: int) -> list[tuple[str, int]]:
     return ngrams
 
 
-def naive_count_filter(Q, S, th):
-    n = 2
-    gsigs = ngramify(S, n)
-    csigs = nchunkify(Q, n)
-    mismatch = 0
-    M = []
-    LB = ceil(len(Q) / n) - th
-    for qchunk, chunk_pos in csigs:
-        match_idx = bisect.bisect_left(gsigs, (qchunk,))
-        if match_idx >= len(gsigs):
-            match_ngram = None
-        elif qchunk == gsigs[match_idx][0]:
-            match_ngram, ngram_pos = gsigs[match_idx]
-        else:
-            match_ngram = None
+class IndexChunk:
+    def __init__(self, threshold: int):
+        self.t = threshold
+                                     # str_len, chunk offset, record id
+        self.listings: dict[str, list[int, int, int]] = dict()
+        
+    def append(self, chunk_filter: TrueMatchFilter):
+        for i in range(0, self.t + 1):
+            if chunk_filter.chunks[i][0] not in self.listings:
+                self.listings[chunk_filter.chunks[i][0]] = []
+            self.listings[chunk_filter.chunks[i][0]].append((chunk_filter.str_len, chunk_filter.chunks[i][1], chunk_filter.id))
             
-        if match_ngram is None:
-            mismatch += 1
-            if mismatch > len(csigs) - LB:
-                return False, []
-        else:
-            while match_ngram == qchunk and abs(chunk_pos - ngram_pos) <= threshold:
-                M.append((ngram_pos, chunk_pos))
-                match_idx += 1
-                if match_idx >= len(gsigs):
-                    break
-                match_ngram, ngram_pos = gsigs[match_idx]
+    def query(self, query, threshold: int) -> list[int]:
+        sigs = ngramify(query, 5)
+        prefix_sig_count = len(query) - (ceil((len(query) - threshold) / 5) - threshold) + 1
+        prefix_sigs = sigs[:prefix_sig_count]
+        candidates = []
+        for sig_gram, sig_pos in prefix_sigs:
+            for candidate in self.listings.get(sig_gram, []):
+                cnd_str_len, cnd_pos, cnd_id = candidate
+                if cnd_id not in candidates and abs(cnd_str_len - len(query)) <= threshold and abs(cnd_pos - sig_pos) <= threshold:
+                    candidates.append(cnd_id)
+        return candidates
+            
+        
+        
     
-    # if len(M) is less than LB, filter pair out
-    f = len(M) >= LB
-    return False if not f else true_match(M, LB, n)
-
-def true_match(M: list[tuple[str, str, int]], lb: int, n: int) -> bool:
-    M.sort(key=lambda x: (x[1], x[0]))
-    M.insert(0, None)
-    opt = [0] * len(M)
-    
-    # first in tuple is chunk, second is ngram
-    def compatible(ei: tuple[str, str, int], ej: tuple[str, str, int]) -> bool:
-        if ej is None:
-            return True
-        if ei[1] != ej[1] and ei[0] >= (ej[0] + n):
-            return True
-        return False
-
-    
-    for k in range(1, len(M)):
-        mx = -9999
-        mn = min(k, len(M) - lb + 1)
-        for i in range(1, mn + 1):
-            if compatible(M[k], M[k - i]) and opt[k - i] > mx:
-                
-                mx = opt[k - i] + 1
-        opt[k] = mx
-    return max(opt[lb:]) >= lb
 
 
 # with open('./workloads/mini/input') as f:
@@ -228,9 +202,21 @@ db = [l for id, l in enumerate(data) if id < srch_id]
 qdb = [l for id, l in enumerate(data) if id > srch_id]
 
 filters: list[NGramFilter] = [NGramFilter(doc) for doc in db]
-threshold = 2
-n = 2
-true_match_filters: list[TrueMatchFilter] = [TrueMatchFilter(n, doc) for doc in db]
+n = 5
+true_match_filters: list[TrueMatchFilter] = [TrueMatchFilter(n, doc, idx + 1) for idx, doc in enumerate(db)]
+
+max_threshold = max([int(l.split(',')[1]) for l in qdb])
+indexes: list[IndexChunk] = []
+
+print('---- Building indexes -----')
+for i in range(max_threshold + 1):
+    indexes.append(IndexChunk(i))
+    for tmf in true_match_filters:
+        indexes[-1].append(tmf)
+print('----- Index built -------')
+
+def flatten(l):
+    return [item for sublist in l for item in sublist]
 
 # qs, threshold = qdb[0].split(',')
 ngrams = ngramify('abcdcdab', 2)
@@ -256,35 +242,25 @@ ngrams = ngramify('abcdcdab', 2)
 
 # Query - CTCTGTTGCCCAGGCTGGAGTGCACTGGCGTGAGTCTCGGCTCACTGCAACCTCTGCTTCCCAGGTTTAAGCGATTCTCCTGCTTCAGCCTCCCAAGTAGC 
 # Record - GCTCTGTCGCCCAGGCTGGAGTGCAGTGGCATGATCTCGGCTCACTGCAACCTCCACCTCCCAGGTTCAAGTGATTCTCCTGCCTCAGCCTCCCGAGTAGC 
-ft = TrueMatchFilter(2, 'GCTCTGTCGCCCAGGCTGGAGTGCAGTGGCATGATCTCGGCTCACTGCAACCTCCACCTCCCAGGTTCAAGTGATTCTCCTGCCTCAGCCTCCCGAGTAGC')
-mt = ft.matches(ngramify('CTCTGTTGCCCAGGCTGGAGTGCACTGGCGTGAGTCTCGGCTCACTGCAACCTCTGCTTCCCAGGTTTAAGCGATTCTCCTGCTTCAGCCTCCCAAGTAGC', 2), 12)
-print('EZ', mt)
+# ft = TrueMatchFilter(2, 'GCTCTGTCGCCCAGGCTGGAGTGCAGTGGCATGATCTCGGCTCACTGCAACCTCCACCTCCCAGGTTCAAGTGATTCTCCTGCCTCAGCCTCCCGAGTAGC')
+# mt = ft.matches(ngramify('CTCTGTTGCCCAGGCTGGAGTGCACTGGCGTGAGTCTCGGCTCACTGCAACCTCTGCTTCCCAGGTTTAAGCGATTCTCCTGCTTCAGCCTCCCAAGTAGC', 2), 12)
 
 
 
-# total_sum = 0
-# for query in qdb:
-#     qs, threshold = query.split(',')
-#     threshold = int(threshold)
-#     t2 = threshold * 2
-#     query_filter = NGramFilter(qs)
-#     qs_len = len(qs)
-#     filtered = [(doc, idx) for idx, doc in enumerate(db) if abs(qs_len - len(doc)) <= threshold]
-#     # print('Filtered: LenFilter', len(filtered))
+total_sum = 0
+for query in qdb:
+    qs, threshold = query.split(',')
+    threshold = int(threshold)
+    candidates = [index.query(qs, threshold) for index in indexes if index.t <= threshold]
+    candidates = set(flatten(candidates))
     
-    
-#     filtered = [(doc, idx) for doc, idx in filtered if NGramFilter.dist(filters[idx], query_filter) <= t2]
-#     # print('Filtered: NgramDist', len(filtered))
-    
-#     # if len(filtered) < 1000:
-#     filtered = [(doc, idx) for doc, idx in filtered if true_match_filters[idx].matches(ngramify(qs, n), threshold)]
-    
-#     print('Filtered TrueMatch: ', len(filtered))
-#     for word, idx in filtered:
-#         distance = ukkonen.distance(qs, word, threshold + 1)
-#         if distance <= threshold:
-#             # print('Matching: ', qs, word, threshold)
-#             total_sum += idx + 1
-#         # print(qs, '\t', word, ' = ', distance)
+    print('Candidates: ', len(candidates))
+    filtered = [(db[candidate - 1], candidate - 1) for candidate in candidates]
+    for word, idx in filtered:
+        distance = ukkonen.distance(qs, word, threshold + 1)
+        if distance <= threshold:
+            # print('Matching: ', qs, word, threshold)
+            total_sum += idx + 1
+        # print(qs, '\t', word, ' = ', distance)
         
-# print('Total sum Filter: ', total_sum)
+print('Total sum Filter: ', total_sum)
