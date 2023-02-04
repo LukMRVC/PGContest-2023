@@ -64,7 +64,7 @@ fn read<R: std::io::Read>(file: R) {
         len_sum += line.len();
     }
 
-    println!("Reading data took: {} ms", start.elapsed().as_millis());
+    // println!("Reading data took: {} ms", start.elapsed().as_millis());
 
     'outer: for srchline in srchdata.iter().take(5) {
         for char_byte in srchline.iter() {
