@@ -99,33 +99,12 @@ impl TrueMatchFilter {
     ) -> bool {
         let lb = self.lbstr.saturating_sub(threshold);
         let mut mismatches = 0;
-
-        let mut last_chunk = 0;
-        let mut last_idx_start = 0;
         let mut match_idx = 0;
 
         for (chunk, chunk_pos) in self.chunks.iter() {
-            if last_chunk != *chunk {
-                last_chunk = *chunk;
+            let mut srch_res = ngram_list.binary_search_by_key(chunk, |&(a, _)| a);
 
-                let srch_res = ngram_list.binary_search_by_key(chunk, |&(a, _)| a);
-                if let Ok(mut srch_idx) = srch_res {
-                    while srch_idx > 0 && ngram_list[srch_idx - 1].0 == *chunk {
-                        srch_idx -= 1;
-                    }
-                    last_idx_start = srch_idx;
-                } else {
-                    last_idx_start = usize::MAX;
-
-                    // I can insert usize::MAX since I know that strings are of limited length
-                    mismatches += 1;
-                    if mismatches > self.chunks.len() - lb {
-                        match_set.clear();
-                        return false;
-                    }
-                    continue;
-                }
-            } else if last_idx_start == usize::MAX {
+            if srch_res.is_err() {
                 mismatches += 1;
                 if mismatches > self.chunks.len() - lb {
                     match_set.clear();
@@ -134,10 +113,14 @@ impl TrueMatchFilter {
                 continue;
             }
 
-            match_idx = last_idx_start;
+            while let Ok(srch_idx) = srch_res {
+                srch_res = ngram_list[..srch_idx].binary_search_by_key(chunk, |&(a, _)| a);
+                match_idx = srch_idx;
+            }
 
             let (mut match_ngram, mut ngram_pos) =
                 (ngram_list[match_idx].0, ngram_list[match_idx].1);
+
             while match_ngram == *chunk {
                 if chunk_pos.abs_diff(ngram_pos) <= threshold {
                     match_set.push((*chunk, ngram_pos, *chunk_pos));
@@ -398,5 +381,32 @@ mod tests {
         let matches = fil.matches(&q_ngrams, 12, &mut match_set);
 
         assert_eq!(matches, true);
+    }
+
+    #[test]
+    fn bin_search_lowest() {
+        let ngram_list = vec![
+            (122, 0),
+            (120, 1),
+            (120, 2),
+            (120, 3),
+            (120, 4),
+            (120, 5),
+            (120, 6),
+        ];
+
+        let mut lowest_idx = usize::MAX;
+        let chunk = &120;
+        let mut srch_res = ngram_list.binary_search_by_key(chunk, |&(a, _)| a);
+        while let Ok(srch_idx) = srch_res {
+            srch_res = ngram_list[..srch_idx].binary_search_by_key(chunk, |&(a, _)| a);
+            lowest_idx = srch_idx;
+        }
+
+        // while srch_idx > 0 && ngram_list[srch_idx - 1].0 == *chunk {
+        //     srch_idx -= 1;
+        // }
+
+        assert_eq!(lowest_idx, 1usize);
     }
 }

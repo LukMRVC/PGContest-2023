@@ -28,18 +28,18 @@ fn ukkonen_map(id: usize, word: &[u8], qwlen: usize, qwbytes: &[u8], threshold: 
 }
 
 // ngrams and nchunks size
-const N: usize = 5;
+const N: usize = 3;
 
 #[inline(always)]
-fn record_to_chunk_filter(record: &Vec<u8>) -> TrueMatchFilter {
-    TrueMatchFilter::new(record, N)
+fn record_to_chunk_filter(record: &Vec<u8>, n: usize) -> TrueMatchFilter {
+    TrueMatchFilter::new(record, n)
 }
 
 #[inline(always)]
-fn record_to_ngrams(record: &mut String) -> Vec<(i32, usize)> {
-    let padding = String::from_utf8(vec![b'$'; N - 1]).unwrap();
+fn record_to_ngrams(record: &mut String, n: usize) -> Vec<(i32, usize)> {
+    let padding = String::from_utf8(vec![b'$'; n - 1]).unwrap();
     record.push_str(&padding);
-    ngrams(record.as_bytes(), N)
+    ngrams(record.as_bytes(), n)
 }
 
 fn read<R: std::io::Read>(file: R) {
@@ -53,6 +53,7 @@ fn read<R: std::io::Read>(file: R) {
     let mut is_dna: bool = true;
     let mut len_sum = 0;
 
+    let start = std::time::Instant::now();
     while let Some(line) = reader.next_line() {
         let line = line.expect("read error");
         let line = &line[0..line.len() - 1];
@@ -62,6 +63,8 @@ fn read<R: std::io::Read>(file: R) {
         srchdata.push(line.to_owned());
         len_sum += line.len();
     }
+
+    println!("Reading data took: {} ms", start.elapsed().as_millis());
 
     'outer: for srchline in srchdata.iter().take(5) {
         for char_byte in srchline.iter() {
@@ -73,6 +76,7 @@ fn read<R: std::io::Read>(file: R) {
     }
 
     // let mean_record_length = (len_sum as f32) / (srchdata.len() as f32);
+    // println!("Mean rec len is {}", mean_record_length);
     // let srchdata_lenghts: Vec<usize> = srchdata.par_iter().map(|line| line.len()).collect();
     // let deviation = statistics::std_dev(&srchdata_lenghts, data_mean);
 
@@ -95,10 +99,11 @@ fn read<R: std::io::Read>(file: R) {
             srchdata,
             DNAQgram,
             srchdata.len() >= 250_000 || querydata.len() > 150,
-            false
+            false,
+            5
         );
     } else {
-        sum = macros::filtering!(querydata, srchdata, Qgram, false, true);
+        sum = macros::filtering!(querydata, srchdata, Qgram, true, true, 3);
     }
 
     println!("{}", sum);

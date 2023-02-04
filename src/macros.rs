@@ -120,7 +120,7 @@ macro_rules! query {
 
 // The syntax for filtering will be (querydata, srchdata, is_dna, use_true_match_filter, use_length_filter)
 macro_rules! filtering {
-    ($querydata:ident, $srchdata:ident, $gramtype:ty, $use_true_match:expr, $use_length_filter:expr) => {{
+    ($querydata:ident, $srchdata:ident, $gramtype:ty, $use_true_match:expr, $use_length_filter:expr, $n:expr) => {{
         let srchgrams: Vec<$gramtype> = $srchdata
             .par_iter()
             .map(|data| <$gramtype>::new(data))
@@ -129,15 +129,16 @@ macro_rules! filtering {
         let mut true_filter_chunks: Vec<TrueMatchFilter> = vec![];
         let mut query_ngrams: Vec<Vec<(i32, usize)>> = vec![];
         if $use_true_match {
+            let start = std::time::Instant::now();
             true_filter_chunks = $srchdata
                 .par_iter()
-                .map(|record| record_to_chunk_filter(record))
+                .map(|record| record_to_chunk_filter(record, $n))
                 .collect();
 
             query_ngrams = $querydata
                 .clone()
                 .iter_mut()
-                .map(|(query_record, _)| record_to_ngrams(query_record))
+                .map(|(query_record, _)| record_to_ngrams(query_record, $n))
                 .collect();
         }
 
