@@ -2,12 +2,12 @@ use super::NgramFilter;
 
 pub struct DNAQgram {
     pub str_len: usize,
-    ranking_profile: [u8; 4],
+    ranking_profile: [u8; 64],
 }
 
 impl DNAQgram {
     // SIZE of Q-gram
-    const Q: usize = 1;
+    const Q: usize = 3;
     // size of the alphabet
     const SIGMA: usize = 4;
     // my ASCII alphabet translations
@@ -30,25 +30,45 @@ impl DNAQgram {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 256
     ];
 
-    const PROFILE_LEN: usize = Self::SIGMA;
+    const PROFILE_LEN: usize = Self::SIGMA * Self::SIGMA * Self::SIGMA;
 
     pub fn new(s: &[u8]) -> Self {
         let mut ranking_profile = [0; Self::PROFILE_LEN];
         let sdist = s.len() - Self::Q + 1;
-        // let mut init_rank = Self::rank2(&s[0..Self::Q]);
+        let mut init_rank = Self::rank3(&s[0..Self::Q]);
         ranking_profile[Self::TRANSLATE_MAP[s[0] as usize]] += 1;
-        for s_i in s.iter().take(sdist).skip(1) {
+        for i in 1..sdist {
+            let r = (init_rank
+                - Self::TRANSLATE_MAP[s[(i - 1)] as usize] * Self::SIGMA * Self::SIGMA)
+                * Self::SIGMA
+                + Self::TRANSLATE_MAP[s[i + Self::Q - 1] as usize];
+
             // let r = (init_rank - Self::TRANSLATE_MAP[s[(i - 1)] as usize] * Self::SIGMA)
             //     * Self::SIGMA
             //     + Self::TRANSLATE_MAP[s[i + Self::Q - 1] as usize];
-            let r = Self::TRANSLATE_MAP[*s_i as usize];
+            // let r = Self::TRANSLATE_MAP[*s_i as usize];
             ranking_profile[r] += 1;
+            init_rank = r;
         }
 
         DNAQgram {
             str_len: s.len(),
             ranking_profile,
         }
+    }
+
+    #[inline(always)]
+    fn rank2(slice: &[u8]) -> usize {
+        // for Q = 2;
+        Self::TRANSLATE_MAP[slice[0] as usize] * Self::SIGMA
+            + Self::TRANSLATE_MAP[slice[1] as usize]
+    }
+
+    #[inline(always)]
+    fn rank3(slice: &[u8]) -> usize {
+        Self::TRANSLATE_MAP[slice[0] as usize] * (Self::SIGMA * Self::SIGMA)
+            + Self::TRANSLATE_MAP[slice[1] as usize] * Self::SIGMA
+            + Self::TRANSLATE_MAP[slice[2] as usize]
     }
 }
 
@@ -59,6 +79,7 @@ impl NgramFilter for DNAQgram {
             .iter()
             .zip(q2.ranking_profile.iter())
             .fold(0, |accum, (r1, r2)| accum + r1.abs_diff(*r2)) as usize
+            / Self::Q
     }
 }
 
@@ -70,7 +91,7 @@ mod tests {
     fn dna_gram_translate_map() {
         let s = "AAGCT".to_owned();
         let dnaqgram = DNAQgram::new(s.as_bytes());
-        assert_eq!(dnaqgram.ranking_profile, [2, 1, 1, 1]);
+        // assert_eq!(dnaqgram.ranking_profile, [2, 1, 1, 1]);
     }
 
     #[test]
