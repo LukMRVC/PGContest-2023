@@ -104,7 +104,7 @@ fn read<R: std::io::Read>(file: R) {
             5
         );
     } else {
-        sum = macros::filtering!(querydata, srchdata, Qgram, true, true, 3);
+        sum = macros::filtering!(querydata, srchdata, Qgram, true, true, 2);
     }
 
     println!("{}", sum);
