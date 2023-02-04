@@ -63,6 +63,7 @@ fn read<R: std::io::Read>(file: R) {
         srchdata.push(line.to_owned());
         len_sum += line.len();
     }
+    // start.elapsed().as_millis()
 
     // println!("Reading data took: {} ms", start.elapsed().as_millis());
 

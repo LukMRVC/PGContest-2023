@@ -98,6 +98,9 @@ impl TrueMatchFilter {
         match_set: &mut Vec<(i32, usize, usize)>,
     ) -> bool {
         let lb = self.lbstr.saturating_sub(threshold);
+        if lb == 0 {
+            return true;
+        }
         let mut mismatches = 0;
         let mut match_idx = 0;
 

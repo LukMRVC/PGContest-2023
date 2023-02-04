@@ -3,35 +3,59 @@ macro_rules! query {
         $querydata
             .par_iter()
             .enumerate()
-            .fold(
-                || 0usize,
-                |acc, (qid, (query_word, t))| {
-                    // let mut sum = 0;
-                    let qwlen = query_word.len();
-                    let qwbytes = query_word.as_bytes();
-                    let query_qgram = <$gramtype>::new(qwbytes);
-                    let query_ngram_list = &$query_ngrams.get(qid);
-                    let t2 = *t * 2;
-                    let mut match_set: Vec<(i32, usize, usize)> = Vec::with_capacity(128);
+            .fold(||0usize, |acc, (qid, (query_word, t))| {
+                // let mut sum = 0;
+                let qwlen = query_word.len();
+                let qwbytes = query_word.as_bytes();
+                let query_qgram = <$gramtype>::new(qwbytes);
+                let query_ngram_list = &$query_ngrams.get(qid);
+                let t2 = *t * 2;
+                let mut match_set: Vec<(i32, usize, usize)> = Vec::with_capacity(128);
 
-                    let sum: usize = $srchdata
-                        .iter()
-                        .enumerate()
-                        .filter(|(wid, _)| &$srchgrams[*wid].str_len.abs_diff(qwlen) <= t)
-                        .filter(|(wid, _)| <$gramtype>::dist(&$srchgrams[*wid], &query_qgram) <= t2)
-                        .filter(|(wid, _)| {
-                            $true_filter_chunks[*wid].matches(
-                                query_ngram_list.unwrap(),
-                                *t,
-                                &mut match_set,
-                            )
-                        })
-                        .map(|(id, word)| ukkonen_map(id + 1, word, qwlen, qwbytes, t + 1))
-                        .sum();
-                    acc + sum
-                },
-            )
-            .sum()
+                // let tmp: Vec<(usize, &Vec<u8>)> = $srchdata
+                //     .iter()
+                //     .enumerate()
+                //     .filter(|(wid, _)| &$srchgrams[*wid].str_len.abs_diff(qwlen) <= t)
+                //     .filter(|(wid, _)| <$gramtype>::dist(&$srchgrams[*wid], &query_qgram) <= t2)
+                //     .collect();
+
+                // println!("Filtered after len and count filter: {}", tmp.len());
+
+                // let start = std::time::Instant::now();
+                // let tmp: Vec<&(usize, &Vec<u8>)> = tmp
+                //     .iter()
+                //     .filter(|(wid, _)| {
+                //         $true_filter_chunks[*wid].matches(
+                //             query_ngram_list.unwrap(),
+                //             *t,
+                //             &mut match_set,
+                //         )
+                //     })
+                //     .collect();
+
+                // println!(
+                //     "Filtered true match: {}, took {} ms",
+                //     tmp.len(),
+                //     start.elapsed().as_millis()
+                // );
+
+                let sum: usize = $srchdata
+                    .iter()
+                    .enumerate()
+                    .filter(|(wid, _)| &$srchgrams[*wid].str_len.abs_diff(qwlen) <= t)
+                    .filter(|(wid, _)| <$gramtype>::dist(&$srchgrams[*wid], &query_qgram) <= t2)
+                         .filter(|(wid, _)| {
+                        $true_filter_chunks[*wid].matches(
+                            query_ngram_list.unwrap(),
+                            *t,
+                            &mut match_set,
+                        )
+                    })
+                    .map(|(id, word)| ukkonen_map(id + 1, word, qwlen, qwbytes, t + 1))
+                    .sum();
+                acc + sum
+            })
+        .sum()
     };
 
     ($querydata:ident, $srchdata:ident, $gramtype:ty, $query_ngrams:ident, $srchgrams:ident, $true_filter_chunks:ident, false, true) => {
@@ -63,34 +87,58 @@ macro_rules! query {
         $querydata
             .par_iter()
             .enumerate()
-            .fold(
-                || 0usize,
-                |acc, (qid, (query_word, t))| {
-                    // let mut sum = 0;
-                    let qwlen = query_word.len();
-                    let qwbytes = query_word.as_bytes();
-                    let query_qgram = <$gramtype>::new(qwbytes);
-                    let query_ngram_list = &$query_ngrams.get(qid);
-                    let t2 = *t * 2;
-                    let mut match_set: Vec<(i32, usize, usize)> = Vec::with_capacity(128);
+            .fold(||0usize, |acc, (qid, (query_word, t))| {
+                // let mut sum = 0;
+                let qwlen = query_word.len();
+                let qwbytes = query_word.as_bytes();
+                let query_qgram = <$gramtype>::new(qwbytes);
+                let query_ngram_list = &$query_ngrams.get(qid);
+                let t2 = *t * 2;
+                let mut match_set: Vec<(i32, usize, usize)> = Vec::with_capacity(128);
 
-                    let sum: usize = $srchdata
-                        .iter()
-                        .enumerate()
-                        .filter(|(wid, _)| <$gramtype>::dist(&$srchgrams[*wid], &query_qgram) <= t2)
-                        .filter(|(wid, _)| {
-                            $true_filter_chunks[*wid].matches(
-                                query_ngram_list.unwrap(),
-                                *t,
-                                &mut match_set,
-                            )
-                        })
-                        .map(|(id, word)| ukkonen_map(id + 1, word, qwlen, qwbytes, t + 1))
-                        .sum();
-                    acc + sum
-                },
-            )
-            .sum()
+                // let tmp: Vec<(usize, &Vec<u8>)> = $srchdata
+                //     .iter()
+                //     .enumerate()
+                //     .filter(|(wid, _)| &$srchgrams[*wid].str_len.abs_diff(qwlen) <= t)
+                //     .filter(|(wid, _)| <$gramtype>::dist(&$srchgrams[*wid], &query_qgram) <= t2)
+                //     .collect();
+
+                // println!("Filtered after len and count filter: {}", tmp.len());
+
+                // let start = std::time::Instant::now();
+                // let tmp: Vec<&(usize, &Vec<u8>)> = tmp
+                //     .iter()
+                //     .filter(|(wid, _)| {
+                //         $true_filter_chunks[*wid].matches(
+                //             query_ngram_list.unwrap(),
+                //             *t,
+                //             &mut match_set,
+                //         )
+                //     })
+                //     .collect();
+
+                // println!(
+                //     "Filtered true match: {}, took {} ms",
+                //     tmp.len(),
+                //     start.elapsed().as_millis()
+                // );
+
+                let sum: usize = $srchdata
+                    .iter()
+                    .enumerate()
+                    .filter(|(wid, _)| <$gramtype>::dist(&$srchgrams[*wid], &query_qgram) <= t2)
+                    .filter(|(wid, _)| {
+                        $true_filter_chunks[*wid].matches(
+                            query_ngram_list.unwrap(),
+                            *t,
+                            &mut match_set,
+                        )
+                    })
+                    .map(|(id, word)| ukkonen_map(id + 1, word, qwlen, qwbytes, t + 1))
+                    .sum();
+                acc + sum
+            })
+        .sum()
     };
 
     ($querydata:ident, $srchdata:ident, $gramtype:ty, $query_ngrams:ident, $srchgrams:ident, $true_filter_chunks:ident, false, false) => {
