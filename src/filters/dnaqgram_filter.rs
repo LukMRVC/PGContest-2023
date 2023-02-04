@@ -2,12 +2,12 @@ use super::NgramFilter;
 
 pub struct DNAQgram {
     pub str_len: usize,
-    ranking_profile: [u8; 64],
+    ranking_profile: [u8; 16],
 }
 
 impl DNAQgram {
     // SIZE of Q-gram
-    const Q: usize = 3;
+    const Q: usize = 2;
     // size of the alphabet
     const SIGMA: usize = 4;
     // my ASCII alphabet translations
@@ -30,16 +30,15 @@ impl DNAQgram {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 256
     ];
 
-    const PROFILE_LEN: usize = Self::SIGMA * Self::SIGMA * Self::SIGMA;
+    const PROFILE_LEN: usize = Self::SIGMA * Self::SIGMA;
 
     pub fn new(s: &[u8]) -> Self {
         let mut ranking_profile = [0; Self::PROFILE_LEN];
         let sdist = s.len() - Self::Q + 1;
-        let mut init_rank = Self::rank3(&s[0..Self::Q]);
+        let mut init_rank = Self::rank2(&s[0..Self::Q]);
         ranking_profile[Self::TRANSLATE_MAP[s[0] as usize]] += 1;
         for i in 1..sdist {
-            let r = (init_rank
-                - Self::TRANSLATE_MAP[s[(i - 1)] as usize] * Self::SIGMA * Self::SIGMA)
+            let r = (init_rank - Self::TRANSLATE_MAP[s[(i - 1)] as usize] * Self::SIGMA)
                 * Self::SIGMA
                 + Self::TRANSLATE_MAP[s[i + Self::Q - 1] as usize];
 
