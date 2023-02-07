@@ -52,57 +52,48 @@ def pivots_selection(prefix_set: list[tuple[str, int]], threshold: int):
     pfset = prefix_set.copy()
     pfset.sort(key=lambda x: x[1])
     pfset_weights = [occurence_map.get(ngram, [1])[0] for ngram, _ in pfset]
-    pfset_sorted = pfset_weights.copy()
-    pfset_sorted.sort()
+    min_weight = min(pfset_weights)
+    min_weight_idx = pfset_weights.index(min_weight)
     
-    weights = []
-    pivots = []
+    mem_weights = []
+    mem_pivots = []
     for _ in range(len(pfset)):
-        weights.append([9999] * (threshold + 1))
-        pivots.append([[]] * (threshold + 1))
-        weights[-1][0] = pfset_sorted[0]
-        pivots[-1][0] = prefix_set[0]
+        mem_weights.append([9999] * (threshold + 1))
+        mem_pivots.append([[]] * (threshold + 1))
+        mem_weights[-1][0] = min_weight
+        mem_pivots[-1][0] = [pfset[min_weight_idx]]
     
-    
+    @cache
     def optimal_selection(i, j):
-        minimal = sum(pfset_sorted[:j + 1])
-        if j == 0:
+        if j == 0 and i >= j:
             mn = min(pfset_weights[:i + 1])
             mnidx = pfset_weights[:i + 1].index(mn)
             return pfset_weights[mnidx], [pfset[mnidx]]
         if i < j:
-            return 9999, []
-        if pivots[i][j] != []:
-            return weights[i][j], pivots[i][j]
-
-        max_ks = []
-        for k in range(j, i + 1):
-            max_k = 0
-            kgram, kgram_pos = pfset[k]
-            kminus = 1
-            k1gram, k1gram_pos = pfset[k - kminus]
-            while abs(kgram_pos - k1gram_pos) < threshold:
-                kminus += 1
-                k1gram, k1gram_pos = pfset[k - kminus]
-            max_k = k - kminus
-            if max_k < 0:
-                continue
-            max_ks.append((k, max_k))
-            
-            w, p = optimal_selection(max_k, j - 1)
-            weights[max_k][j - 1] = w
-            pivots[max_k][j - 1] = p
+            return 99999, []
         
-        values = [weights[mxk][j-1] + pfset_weights[k] for k, mxk in max_ks]
-        mn = min(values)
-        mnidx = values.index(mn)
-        return weights[max_ks[mnidx][1]][j - 1] + pfset_weights[max_ks[mnidx][0]], pivots[max_ks[mnidx][1]][j-1] + [pfset[max_ks[mnidx][0]]]
-
-        if pfset_weights[k] + weights[max_k][j - 1] == minimal:
-            return weights[max_k][j - 1] + pfset_weights[k], pivots[max_k][j - 1] + [pfset[k]]
+        minimal_k = len(pfset) + 1
+        min_w = 99999
+        min_pivots = []
+        for k in range(j, i + 1):
+            _, kgram_pos = pfset[k]
+            l = k - 1
+            _, lgram_pos = pfset[k - 1]
+            if abs(kgram_pos - lgram_pos) < threshold:
+                l = k - 2
+            weight, candidate_pivot = optimal_selection(l, j - 1)
+            if weight + pfset_weights[k] < min_w:
+                minimal_k = k
+                min_w = weight + pfset_weights[k]
+                min_pivots = candidate_pivot
+        
+        if minimal_k > len(pfset):
+            return 99999, []
+        return min_w, min_pivots + [pfset[minimal_k]]
+    
     
     weight, pivots = optimal_selection(len(pfset) - 1, threshold)
-    
+    # pivots = []
     # pivots.append(prefix_set[0])
     # for ngram, ngram_pos in prefix_set[1:]:
     #     for pn in pivots:
@@ -129,7 +120,7 @@ for ngram_set in ngram_db:
         occurence_map[ngram][0] += 1
         # occurence_map[ngram] += 1
         
-print(pivots_selection([('ut', 0), ('ub', 2), ('bb', 3), ('co', 6), ('ou', 7)], threshold))
+# print(pivots_selection([('ut', 0), ('ub', 2), ('bb', 3), ('tu', 1), ('ou', 7)], threshold))
 
 for str_id, ngram_set in enumerate(ngram_db):
     ngram_prefix_set.append(prefix_selection(ngram_set, threshold))
@@ -162,7 +153,6 @@ for str_id, ngram_set in enumerate(ngram_db):
 pivot_ngrams = []
 for str_id, ngram_set in enumerate(ngram_prefix_set):
     pivots = pivots_selection(ngram_set, threshold)
-    
     for piv, piv_pos in pivots:
         if piv not in piv_ivx:
             piv_ivx[piv] = []
