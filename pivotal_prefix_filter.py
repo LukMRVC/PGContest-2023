@@ -1,4 +1,5 @@
 import ukkonen
+from functools import cache
 
 
 def ngramify(doc: str, n: int) -> list[tuple[str, int]]:
@@ -12,7 +13,8 @@ def ngramify(doc: str, n: int) -> list[tuple[str, int]]:
     return ngrams
 
 
-with open('./workloads/mini/input') as f:
+# with open('./workloads/mini/input') as f:
+with open('./workloads/local1/input') as f:
     data = [l.strip() for l in f.readlines()]
     
 srch_id = data.index('[SEARCH]')
@@ -31,6 +33,7 @@ pref_len_map = dict()
 piv_len_map = dict()
 
 threshold = 2
+n = 2
 ngram_prefix_set = []
 
 def global_order_sort(gram):
@@ -43,24 +46,80 @@ def prefix_selection(ngrams, threshold):
     return ngrams[:prefix_len]
 
 
-def pivots_selection(prefix_set, threshold):
+# r3 = utubbecou
+# s = yotubecom
+def pivots_selection(prefix_set: list[tuple[str, int]], threshold: int):
+    pfset = prefix_set.copy()
+    pfset.sort(key=lambda x: x[1])
+    pfset_weights = [occurence_map.get(ngram, [1])[0] for ngram, _ in pfset]
+    pfset_sorted = pfset_weights.copy()
+    pfset_sorted.sort()
+    
+    weights = []
     pivots = []
-    pivots.append(prefix_set[0])
-    for ngram, ngram_pos in prefix_set[1:]:
-        for pn in pivots:
-            if abs(pn[1] - ngram_pos) < n:
-                break
-        else:
-            pivots.append((ngram, ngram_pos))
+    for _ in range(len(pfset)):
+        weights.append([9999] * (threshold + 1))
+        pivots.append([[]] * (threshold + 1))
+        weights[-1][0] = pfset_sorted[0]
+        pivots[-1][0] = prefix_set[0]
+    
+    
+    def optimal_selection(i, j):
+        minimal = sum(pfset_sorted[:j + 1])
+        if j == 0:
+            mn = min(pfset_weights[:i + 1])
+            mnidx = pfset_weights[:i + 1].index(mn)
+            return pfset_weights[mnidx], [pfset[mnidx]]
+        if i < j:
+            return 9999, []
+        if pivots[i][j] != []:
+            return weights[i][j], pivots[i][j]
+
+        max_ks = []
+        for k in range(j, i + 1):
+            max_k = 0
+            kgram, kgram_pos = pfset[k]
+            kminus = 1
+            k1gram, k1gram_pos = pfset[k - kminus]
+            while abs(kgram_pos - k1gram_pos) < threshold:
+                kminus += 1
+                k1gram, k1gram_pos = pfset[k - kminus]
+            max_k = k - kminus
+            if max_k < 0:
+                continue
+            max_ks.append((k, max_k))
             
-        if len(pivots) == threshold + 1:
-            break
+            w, p = optimal_selection(max_k, j - 1)
+            weights[max_k][j - 1] = w
+            pivots[max_k][j - 1] = p
+        
+        values = [weights[mxk][j-1] + pfset_weights[k] for k, mxk in max_ks]
+        mn = min(values)
+        mnidx = values.index(mn)
+        return weights[max_ks[mnidx][1]][j - 1] + pfset_weights[max_ks[mnidx][0]], pivots[max_ks[mnidx][1]][j-1] + [pfset[max_ks[mnidx][0]]]
+
+        if pfset_weights[k] + weights[max_k][j - 1] == minimal:
+            return weights[max_k][j - 1] + pfset_weights[k], pivots[max_k][j - 1] + [pfset[k]]
+    
+    weight, pivots = optimal_selection(len(pfset) - 1, threshold)
+    
+    # pivots.append(prefix_set[0])
+    # for ngram, ngram_pos in prefix_set[1:]:
+    #     for pn in pivots:
+    #         if abs(pn[1] - ngram_pos) < n:
+    #             break
+    #     else:
+    #         pivots.append((ngram, ngram_pos))
+            
+    #     if len(pivots) == threshold + 1:
+    #         break
     return pivots
+
+
 
 
 db.sort(key=lambda x: len(x))
 
-n = 2
 ngram_db = [ngramify(rec, n) for rec in db]
 
 for ngram_set in ngram_db:
@@ -69,6 +128,8 @@ for ngram_set in ngram_db:
             occurence_map[ngram] = [0, len(occurence_map.keys()) + 1]
         occurence_map[ngram][0] += 1
         # occurence_map[ngram] += 1
+        
+print(pivots_selection([('ut', 0), ('ub', 2), ('bb', 3), ('co', 6), ('ou', 7)], threshold))
 
 for str_id, ngram_set in enumerate(ngram_db):
     ngram_prefix_set.append(prefix_selection(ngram_set, threshold))
@@ -84,7 +145,7 @@ for str_id, ngram_set in enumerate(ngram_db):
             pref_len_map[pref_gram][len(db[str_id])] = len(pref_ivx[pref_gram]) - 1
         
     
-    print(ngram_prefix_set[-1])
+    # print(ngram_prefix_set[-1])
 
 # for qword in qdb[:-2]:
     # query, _ = qword.split(',')
@@ -98,7 +159,6 @@ for str_id, ngram_set in enumerate(ngram_db):
 #         print('Filtered', db[idx], ukkonen.distance(query, db[idx], threshold + 1))
 
 # ngram_prefix_set = [ngrams for ngrams in ngram_prefix_set if len(set(ngrams) & set(pref_qngrams)) > 0]
-
 pivot_ngrams = []
 for str_id, ngram_set in enumerate(ngram_prefix_set):
     pivots = pivots_selection(ngram_set, threshold)
@@ -131,9 +191,11 @@ for str_id, ngram_set in enumerate(ngram_prefix_set):
     
             
 for qword in qdb:
-    threshold = 2
+    threshold = 4
     n = 2
-    query, _ = qword.split(',')
+    query, t = qword.split(',')
+    if int(t) != 4:
+        continue
     qngrams = ngramify(query, n)
     pref_qngrams = prefix_selection(qngrams, threshold)
     query_pivots = pivots_selection(pref_qngrams, threshold)
@@ -173,3 +235,7 @@ for qword in qdb:
     for candidate in candidate_set:
         word = db[candidate]
         print('Candidate distance:', word, query, ukkonen.distance(word, query, threshold + 1))
+
+    for rec in db:
+        if ukkonen.distance(query, rec, threshold + 1) <= threshold:
+            print(query, word, 'should match')
