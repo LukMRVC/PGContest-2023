@@ -19,7 +19,7 @@ with open('./workloads/local1/input') as f:
     
 srch_id = data.index('[SEARCH]')
 
-db = [l for id, l in enumerate(data) if id < srch_id]
+db = [(l, id + 1) for id, l in enumerate(data) if id < srch_id]
 qdb = [l for id, l in enumerate(data) if id > srch_id]
 threshold = max([int(q.split(',')[1]) for  q in qdb])
 occurence_map = dict()
@@ -64,61 +64,68 @@ def pivots_selection(pfset: list[tuple[str, int]], threshold: int, pfset_weights
     
     # cache = dict()
     
-    # @cache
-    # def optimal_selection(i, j):
-    #     if j == 0 and i >= j:
-    #         mn = min(pfset_weights[:i + 1])
-    #         mnidx = pfset_weights[:i + 1].index(mn)
-    #         return pfset_weights[mnidx], [pfset[mnidx]]
-    #     if i < j:
-    #         return 9999999999999, []
+    @cache
+    def optimal_selection(i, j):
+        if j == 0 and i >= j:
+            mn = min(pfset_weights[:i + 1])
+            mnidx = pfset_weights[:i + 1].index(mn)
+            return pfset_weights[mnidx], [pfset[mnidx]]
+        if i < j:
+            return 9999999999999, []
         
-    #     minimal_k = len(pfset) + 1
-    #     min_w = 9999999999999
-    #     min_pivots = []
-    #     # if (is_traced and j <= 5) or (i == 6 and j == 3) or (i == 2 and j == 1):
-    #     #     print(f'Getting for i={i} and j={j}')
-    #     for k in range(j, i + 1):
-    #         # if (k == 25 and j == 16) or is_traced:
-    #         #     print('Cus')
-    #         _, kgram_pos = pfset[k]
-    #         l = k - 1
-    #         _, lgram_pos = pfset[k - 1]
-    #         if abs(kgram_pos - lgram_pos) < n:
-    #             l = k - 2
-    #         weight, candidate_pivot = optimal_selection(l, j - 1)
-    #         # if is_traced:
-    #         #     print(f'Result for k={k}/ l={l} and j={j - 1} is {weight} {candidate_pivot}')
+        minimal_k = len(pfset) + 1
+        min_w = 9999999999999
+        min_pivots = []
+        # if (is_traced and j <= 5) or (i == 6 and j == 3) or (i == 2 and j == 1):
+        #     print(f'Getting for i={i} and j={j}')
+        for k in range(j, i + 1):
+            # if (k == 25 and j == 16) or is_traced:
+            #     print('Cus')
+            _, kgram_pos = pfset[k]
+            l = k - 1
+            _, lgram_pos = pfset[k - 1]
+            if abs(kgram_pos - lgram_pos) < n:
+                l = k - 2
+            weight, candidate_pivot = optimal_selection(l, j - 1)
+            # if is_traced:
+            #     print(f'Result for k={k}/ l={l} and j={j - 1} is {weight} {candidate_pivot}')
             
-    #         if weight + pfset_weights[k] < min_w:
-    #             minimal_k = k
-    #             min_w = weight + pfset_weights[k]
-    #             min_pivots = candidate_pivot
+            if weight + pfset_weights[k] < min_w:
+                minimal_k = k
+                min_w = weight + pfset_weights[k]
+                min_pivots = candidate_pivot
         
-    #     if minimal_k > len(pfset):
-    #         return 9999999999999, []
-    #     return min_w, min_pivots + [pfset[minimal_k]]
+        if minimal_k > len(pfset):
+            return 9999999999999, []
+        return min_w, min_pivots + [pfset[minimal_k]]
     
     
-    # weight, pivots = optimal_selection(len(pfset) - 1, threshold)
-    pivots = []
-    pivots.append(pfset[0])
-    for ngram, ngram_pos in pfset[1:]:
-        for pn in pivots:
-            if abs(pn[1] - ngram_pos) < n:
-                break
-        else:
-            pivots.append((ngram, ngram_pos))
+    weight, pivots = optimal_selection(len(pfset) - 1, threshold)
+    # pivots = []
+    # pivots.append(pfset[0])
+    # for ngram, ngram_pos in pfset[1:]:
+    #     for pn in pivots:
+    #         if abs(pn[1] - ngram_pos) < n:
+    #             break
+    #     else:
+    #         pivots.append((ngram, ngram_pos))
             
-        if len(pivots) == threshold + 1:
-            break
+    #     if len(pivots) == threshold + 1:
+    #         break
     pivots.sort(key=global_order_sort)
     return pivots
 
+# sorting the strings messes up their real id
+db.sort(key=lambda x: len(x[0]))
 
-db.sort(key=lambda x: len(x))
+smallest_len = len(db[0][0])
 
-ngram_db = [ngramify(rec, n) for rec in db]
+if smallest_len - n + 1 - (n * threshold) <= 0:
+    print('Strings are too small to support qgram pruning')
+    exit(0)
+
+
+ngram_db = [ngramify(rec, n) for rec, _ in db]
 
 for i in range(0, len(ngram_db), 2):
     ngram_set = ngram_db[i]
@@ -242,6 +249,7 @@ print(f'Indexes built in {(end - start) * 1000}ms')
 
 # qdb = [f'{query},2']
 lve_sum = 0
+lve_sum_2 = 0
 for qword in qdb:
     query, t_ = qword.split(',')
     threshold = int(t_)
@@ -289,19 +297,27 @@ for qword in qdb:
                 if global_order_sort(ngram_prefix_set[rec_id][-1][0]) <= global_order_sort(pref_qngrams[-1][0]) \
                     and abs(cpos - qpiv_pos) <= threshold:
                         candidate_set.add(rec_id)
-                    
+
     print(f'Candidates for query {query} with threshold {threshold}:', len(candidate_set))
+    real_candidates = []
     for candidate in candidate_set:
-        word = db[candidate]
+        word, wid = db[candidate]
         candidate_distance = ukkonen.distance(word, query, threshold + 1)
         # print('Candidate distance:', word, query, candidate_distance)
         if candidate_distance <= threshold:
-            lve_sum += candidate
-
+            real_candidates.append(word)
+            lve_sum += wid
+    
+    # real_ones = []
+    # for idx, rec in enumerate(db):
+    #     if ukkonen.distance(query, rec, threshold + 1) <= threshold:
+    #         real_ones.append(rec)
+    #         lve_sum_2 += idx + 1
+    #         # print(query, word, 'should match')
+    
+    # diff = set(real_candidates) - set(real_ones)
+    # if len(diff) > 0:
+    #     print(f'Diff in candidates is: {len(diff)}')
 
 print('Result sum: ', lve_sum)
-        
 
-    # for rec in db:
-    #     if ukkonen.distance(query, rec, threshold + 1) <= threshold:
-    #         print(query, word, 'should match')
