@@ -1,11 +1,15 @@
 import ukkonen
 from functools import cache
 import time
+import multiprocessing
 
-def ngramify(doc: str, n: int) -> list[tuple[str, int]]:
+
+def ngramify(doc: str, n: int, lt: int = -1) -> list[tuple[str, int]]:
     ngrams = []
+    t = lt if lt >= 0 else threshold
     # padding to make sure we have enough ngrams
-    doc += '$' * (n - 1)
+    if len(doc) - n + 1 - (n * t) <= 0:
+        doc += '$' * (abs(len(doc) - n + 1 - (n * t)) + 1)
     ngram_count = len(doc) - n + 1
     for i in range(ngram_count):
         ngram = doc[i:i + n]
@@ -14,12 +18,14 @@ def ngramify(doc: str, n: int) -> list[tuple[str, int]]:
 
 
 # with open('./workloads/mini/input') as f:
-with open('./workloads/local1/input') as f:
+# with open('./workloads/local1/input') as f:
+# with open('./workloads/cities-2') as f:
+with open('./workloads/cities-mini') as f:
     data = [l.strip() for l in f.readlines()]
     
 srch_id = data.index('[SEARCH]')
 
-db = [(l, id + 1) for id, l in enumerate(data) if id < srch_id]
+db = [(l, id + 1, len(l)) for id, l in enumerate(data) if id < srch_id]
 qdb = [l for id, l in enumerate(data) if id > srch_id]
 threshold = max([int(q.split(',')[1]) for  q in qdb])
 occurence_map = dict()
@@ -31,8 +37,8 @@ occurence_map = dict()
 
 pref_ivx = [dict() for _ in range(threshold + 1)]
 piv_ivx = [dict() for _ in range(threshold + 1)]
-pref_len_map = dict()
-piv_len_map = dict()
+pref_len_map = [dict() for _ in range(threshold + 1)]
+piv_len_map = [dict() for _ in range(threshold + 1)]
 
 n = 2
 ngram_prefix_set = []
@@ -76,19 +82,13 @@ def pivots_selection(pfset: list[tuple[str, int]], threshold: int, pfset_weights
         minimal_k = len(pfset) + 1
         min_w = 9999999999999
         min_pivots = []
-        # if (is_traced and j <= 5) or (i == 6 and j == 3) or (i == 2 and j == 1):
-        #     print(f'Getting for i={i} and j={j}')
         for k in range(j, i + 1):
-            # if (k == 25 and j == 16) or is_traced:
-            #     print('Cus')
             _, kgram_pos = pfset[k]
             l = k - 1
             _, lgram_pos = pfset[k - 1]
             if abs(kgram_pos - lgram_pos) < n:
                 l = k - 2
             weight, candidate_pivot = optimal_selection(l, j - 1)
-            # if is_traced:
-            #     print(f'Result for k={k}/ l={l} and j={j - 1} is {weight} {candidate_pivot}')
             
             if weight + pfset_weights[k] < min_w:
                 minimal_k = k
@@ -101,31 +101,26 @@ def pivots_selection(pfset: list[tuple[str, int]], threshold: int, pfset_weights
     
     
     weight, pivots = optimal_selection(len(pfset) - 1, threshold)
-    # pivots = []
-    # pivots.append(pfset[0])
-    # for ngram, ngram_pos in pfset[1:]:
-    #     for pn in pivots:
-    #         if abs(pn[1] - ngram_pos) < n:
-    #             break
-    #     else:
-    #         pivots.append((ngram, ngram_pos))
-            
-    #     if len(pivots) == threshold + 1:
-    #         break
+
     pivots.sort(key=global_order_sort)
     return pivots
 
 # sorting the strings messes up their real id
 db.sort(key=lambda x: len(x[0]))
 
+# for idx, (w, wid, wlen) in enumerate(db):
+#     if w == 'Bogomolov':
+#         print('Bogomolov ID is: ', idx)
+#         break
+
 smallest_len = len(db[0][0])
 
-if smallest_len - n + 1 - (n * threshold) <= 0:
-    print('Strings are too small to support qgram pruning')
-    exit(0)
+# if smallest_len - n + 1 - (n * threshold) <= 0:
+#     # TODO Pad such small string ngrams
+#     print('Strings are too small to support qgram pruning')
+#     exit(0)
 
-
-ngram_db = [ngramify(rec, n) for rec, _ in db]
+ngram_db = [ngramify(rec, n) for rec, _, __ in db]
 
 for i in range(0, len(ngram_db), 2):
     ngram_set = ngram_db[i]
@@ -134,7 +129,7 @@ for i in range(0, len(ngram_db), 2):
             occurence_map[ngram] = [0, len(occurence_map.keys()) + 1]
         occurence_map[ngram][0] += 1
         # occurence_map[ngram] += 1
-        
+
 # print(pivots_selection([('ut', 0), ('ub', 2), ('bb', 3), ('tu', 1), ('ou', 7)], threshold))
 
 for str_id, ngram_set in enumerate(ngram_db):
@@ -158,6 +153,7 @@ print('Building indexes')
 start = time.time()
 pivot_ngrams = []
 for str_id, ngram_set in enumerate(ngram_prefix_set):
+    
     pfset = ngram_set.copy()
     pfset.sort(key=lambda x: x[1])
     pfset_weights = [occurence_map.get(ngram, [1])[0] for ngram, _ in pfset]
@@ -198,14 +194,23 @@ for str_id, ngram_set in enumerate(ngram_prefix_set):
         
         if g_i[0] not in piv_ivx[t]:
             piv_ivx[t][g_i[0]] = []
+            piv_len_map[t][g_i[0]] = dict()
         piv_ivx[t][g_i[0]].append((str_id, g_i[1]))
+        
+        str_id_len = db[str_id][2]
+        if str_id_len not in piv_len_map[t][g_i[0]]:
+            piv_len_map[t][g_i[0]][str_id_len] = len(piv_ivx[t][g_i[0]]) - 1
         
         # prefix grams to insert
         pref_ins = ngram_set[g_i_1_pref_idx + 1:g_i_pref_idx + 1]
         for pref_gram, gram_pos in pref_ins:
             if pref_gram not in pref_ivx[t]:
                 pref_ivx[t][pref_gram] = []
+                pref_len_map[t][pref_gram] = dict()
+            
             pref_ivx[t][pref_gram].append((str_id, gram_pos))
+            if str_id_len not in pref_len_map[t][pref_gram]:
+                pref_len_map[t][pref_gram][str_id_len] = len(pref_ivx[t][pref_gram]) - 1
             
         g_i_1_pref_idx = g_i_pref_idx
     
@@ -250,10 +255,12 @@ print(f'Indexes built in {(end - start) * 1000}ms')
 # qdb = [f'{query},2']
 lve_sum = 0
 lve_sum_2 = 0
-for qword in qdb:
+
+def query_return_results(qword):
+    lve_sum = 0
     query, t_ = qword.split(',')
     threshold = int(t_)
-    qngrams = ngramify(query, n)
+    qngrams = ngramify(query, n, threshold)
     pref_qngrams = prefix_selection(qngrams, threshold)
     
     pfset = pref_qngrams.copy()
@@ -276,10 +283,12 @@ for qword in qdb:
                 continue
             
             listings = piv_ivx[t][qpref_gram]
-            # start = pref_len_map.get(qpref_gram, dict()).get(len(query) - threshold, 0)
-            # end = pref_len_map.get(qpref_gram, dict()).get(len(query) + threshold + 1, len(pref_len_map.get(qpref_gram, dict()))) - 1
+            last_gram_idx = (n * t + 1) - 1
+            # start = piv_len_map[t].get(qpref_gram, dict()).get(len(query) - threshold, 0)
+            # end = piv_len_map[t].get(qpref_gram, dict()).get(len(query) + threshold + 1, len(piv_len_map[t].get(qpref_gram, dict()))) - 1
+            
             for rec_id, cpos in listings:
-                if global_order_sort(ngram_prefix_set[rec_id][-1][0]) > global_order_sort(pref_qngrams[-1][0]) \
+                if global_order_sort(ngram_prefix_set[rec_id][last_gram_idx][0]) <= global_order_sort(pref_qngrams[last_gram_idx][0]) \
                     and abs(cpos - qgram_pos) <= threshold:
                         candidate_set.add(rec_id)
 
@@ -290,34 +299,57 @@ for qword in qdb:
                 continue
             
             listings = pref_ivx[t][qpiv_gram]
-            # start = piv_len_map.get(qpiv_gram, dict()).get(len(query) - threshold, 0)
-            # end = piv_len_map.get(qpiv_gram, dict()).get(len(query) + threshold + 1, len(piv_len_map.get(qpiv_gram, dict()))) - 1
+            last_gram_idx = (n * t + 1) - 1
+            
+            # start = pref_len_map[t].get(qpiv_gram, dict()).get(len(query) - threshold, 0)
+            # end = pref_len_map[t].get(qpiv_gram, dict()).get(len(query) + threshold + 1, len(pref_len_map[t].get(qpiv_gram, dict()))) - 1
             # for i in range(start, end + 1):
             for rec_id, cpos in listings:
-                if global_order_sort(ngram_prefix_set[rec_id][-1][0]) <= global_order_sort(pref_qngrams[-1][0]) \
+                if global_order_sort(ngram_prefix_set[rec_id][last_gram_idx][0]) > global_order_sort(pref_qngrams[last_gram_idx][0]) \
                     and abs(cpos - qpiv_pos) <= threshold:
                         candidate_set.add(rec_id)
 
-    print(f'Candidates for query {query} with threshold {threshold}:', len(candidate_set))
+    # print(f'Candidates for query {query} with threshold {threshold}:', len(candidate_set))
     real_candidates = []
+    missing_sum = 0
+    selected_candidates = []
     for candidate in candidate_set:
-        word, wid = db[candidate]
+        word, wid, _ = db[candidate]
         candidate_distance = ukkonen.distance(word, query, threshold + 1)
         # print('Candidate distance:', word, query, candidate_distance)
         if candidate_distance <= threshold:
-            real_candidates.append(word)
             lve_sum += wid
+            selected_candidates.append(word)
+            
+    for idx, rec in enumerate(db):
+        if ukkonen.distance(query, rec[0], threshold + 1) <= threshold:
+            real_candidates.append(rec[0])
     
-    # real_ones = []
-    # for idx, rec in enumerate(db):
-    #     if ukkonen.distance(query, rec, threshold + 1) <= threshold:
-    #         real_ones.append(rec)
-    #         lve_sum_2 += idx + 1
-    #         # print(query, word, 'should match')
-    
-    # diff = set(real_candidates) - set(real_ones)
-    # if len(diff) > 0:
-    #     print(f'Diff in candidates is: {len(diff)}')
+    diff = set(real_candidates) - set(selected_candidates)
+    if len(diff) > 0:
+        print(f'Diff in candidates for query {query} and {threshold} is: {len(diff)} {diff}')
+        for word in diff:
+            for idx, rec in enumerate(db):
+                if rec[0] == word:
+                    missing_sum += rec[1]
+                    break
+        
+        
+    return lve_sum, missing_sum
 
-print('Result sum: ', lve_sum)
+
+
+# with multiprocessing.Pool(6) as p:
+#     results = p.map(query_return_results, qdb)
+#     lve_sum = sum(l[0] for l in results)
+#     missing = sum(l[1] for l in results)
+
+
+print(query_return_results('Ozero Umay,1'))
+    # real_ones = []query_return_results('Bogomolovo,1')
+# Diff in candidates for query Bogomolovo is: 1 {'Bogomolov'}
+
+
+
+print('Result sum: ', lve_sum, 'missing', missing, 'together', missing + lve_sum)
 
