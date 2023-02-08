@@ -54,6 +54,7 @@ fn read<R: std::io::Read>(file: R) {
     let mut len_sum = 0;
 
     let start = std::time::Instant::now();
+    let mut min_line_len = usize::MAX;
     while let Some(line) = reader.next_line() {
         let line = line.expect("read error");
         let line = &line[0..line.len() - 1];
@@ -62,6 +63,9 @@ fn read<R: std::io::Read>(file: R) {
         }
         srchdata.push(line.to_owned());
         len_sum += line.len();
+        if line.len() < min_line_len {
+            min_line_len = line.len();
+        }
     }
     // start.elapsed().as_millis()
 
@@ -80,6 +84,7 @@ fn read<R: std::io::Read>(file: R) {
     // println!("Mean rec len is {}", mean_record_length);
     // let srchdata_lenghts: Vec<usize> = srchdata.par_iter().map(|line| line.len()).collect();
     // let deviation = statistics::std_dev(&srchdata_lenghts, data_mean);
+    let mut max_treshold = usize::MIN;
 
     while let Some(line) = reader.next_line() {
         let line = line.expect("read error");
@@ -89,6 +94,9 @@ fn read<R: std::io::Read>(file: R) {
             panic!("Cannot split!");
         };
         let t: usize = t.parse().unwrap();
+        if t > max_treshold {
+            max_treshold = t;
+        }
         querydata.push((query_word.to_owned(), t));
     }
 
@@ -104,7 +112,8 @@ fn read<R: std::io::Read>(file: R) {
             5
         );
     } else {
-        sum = macros::filtering!(querydata, srchdata, Qgram, true, true, 2);
+        println!("Max threshold is {max_treshold} and min str len is {min_line_len}");
+        sum = macros::filtering!(querydata, srchdata, Qgram, false, true, 2);
     }
 
     println!("{}", sum);
