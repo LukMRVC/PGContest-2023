@@ -28,6 +28,11 @@ srch_id = data.index('[SEARCH]')
 db = [(l, id + 1, len(l)) for id, l in enumerate(data) if id < srch_id]
 qdb = [l for id, l in enumerate(data) if id > srch_id]
 threshold = max([int(q.split(',')[1]) for  q in qdb])
+
+# db = [('Ozero Uvay', 1, 10)]
+# qdb = ['Ozero Umay,1']
+# threshold = 6
+
 occurence_map = dict()
 
 # threshold = 3
@@ -153,7 +158,7 @@ print('Building indexes')
 start = time.time()
 pivot_ngrams = []
 for str_id, ngram_set in enumerate(ngram_prefix_set):
-    
+
     pfset = ngram_set.copy()
     pfset.sort(key=lambda x: x[1])
     pfset_weights = [occurence_map.get(ngram, [1])[0] for ngram, _ in pfset]
@@ -161,7 +166,9 @@ for str_id, ngram_set in enumerate(ngram_prefix_set):
     if len(pivots) == 0:
         print(f'Unable to get pivots for: {str_id} -- {db[str_id]}')
         continue
-    
+    if db[str_id][0] == 'Ozero Uvay':
+        print(ngram_set)
+        print(pivots)
     
     g_0 = ngram_db[str_id][0]
     
@@ -186,6 +193,8 @@ for str_id, ngram_set in enumerate(ngram_prefix_set):
     for t in range(1, threshold + 1):
         g_i = piv_ivx_gram_set[t]
         g_i_1 = piv_ivx_gram_set[t - 1]
+        # if db[str_id][0] == 'Ozero Uvay':
+        #     print(f'PIV[{t}][{g_i[0]}] = (, {g_i[1]})')
         
         for idx in range(g_i_pref_idx, len(ngram_set)):
             if g_i == ngram_set[idx]:
@@ -203,10 +212,14 @@ for str_id, ngram_set in enumerate(ngram_prefix_set):
         
         # prefix grams to insert
         pref_ins = ngram_set[g_i_1_pref_idx + 1:g_i_pref_idx + 1]
+        
         for pref_gram, gram_pos in pref_ins:
             if pref_gram not in pref_ivx[t]:
                 pref_ivx[t][pref_gram] = []
                 pref_len_map[t][pref_gram] = dict()
+            
+            # if db[str_id][0] == 'Ozero Uvay':
+            #     print(f'PREF[{t}][{pref_gram}] = (, {gram_pos})')
             
             pref_ivx[t][pref_gram].append((str_id, gram_pos))
             if str_id_len not in pref_len_map[t][pref_gram]:
@@ -339,13 +352,13 @@ def query_return_results(qword):
 
 
 
-# with multiprocessing.Pool(6) as p:
-#     results = p.map(query_return_results, qdb)
-#     lve_sum = sum(l[0] for l in results)
-#     missing = sum(l[1] for l in results)
+with multiprocessing.Pool(6) as p:
+    results = p.map(query_return_results, qdb)
+    lve_sum = sum(l[0] for l in results)
+    missing = sum(l[1] for l in results)
 
 
-print(query_return_results('Ozero Umay,1'))
+# print(query_return_results('Ozero Umay,1'))
     # real_ones = []query_return_results('Bogomolovo,1')
 # Diff in candidates for query Bogomolovo is: 1 {'Bogomolov'}
 
