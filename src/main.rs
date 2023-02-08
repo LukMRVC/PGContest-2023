@@ -112,7 +112,9 @@ fn read<R: std::io::Read>(file: R) {
             5
         );
     } else {
-        println!("Max threshold is {max_treshold} and min str len is {min_line_len}");
+        if srchdata.len() > 200_000 {
+            println!("Max threshold is {max_treshold} and min str len is {min_line_len}");
+        }
         sum = macros::filtering!(querydata, srchdata, Qgram, false, true, 2);
     }
 
