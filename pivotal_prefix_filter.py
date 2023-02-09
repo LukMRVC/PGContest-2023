@@ -37,8 +37,10 @@ occurence_map = dict()
 
 # threshold = 3
 
-# db = ['imyouteca', 'ubuntucom', 'utubbecou', 'youtbecom', 'yoytubeca']
-# query = 'yotubecom'
+db = [('imyouteca', 1, 9), ('ubuntucom', 2, 9), ('utubbecou', 3, 9), ('youtbecom', 4, 9), ('yoytubeca', 5, 9)]
+qdb = ['yotubecom,2', 'yoytbecom,2']
+
+threshold = 3
 
 pref_ivx = [dict() for _ in range(threshold + 1)]
 piv_ivx = [dict() for _ in range(threshold + 1)]
@@ -133,6 +135,8 @@ for i in range(0, len(ngram_db), 2):
         if ngram not in occurence_map:
             occurence_map[ngram] = [0, len(occurence_map.keys()) + 1]
         occurence_map[ngram][0] += 1
+        if '$' in ngram:
+            occurence_map[ngram][0] += 100
         # occurence_map[ngram] += 1
 
 # print(pivots_selection([('ut', 0), ('ub', 2), ('bb', 3), ('tu', 1), ('ou', 7)], threshold))
@@ -158,7 +162,6 @@ print('Building indexes')
 start = time.time()
 pivot_ngrams = []
 for str_id, ngram_set in enumerate(ngram_prefix_set):
-
     pfset = ngram_set.copy()
     pfset.sort(key=lambda x: x[1])
     pfset_weights = [occurence_map.get(ngram, [1])[0] for ngram, _ in pfset]
@@ -252,17 +255,32 @@ end = time.time()
 
 print(f'Indexes built in {(end - start) * 1000}ms')
 
+threshold = 2
 ################ This is the pivotal prefix filter ####################
-# for idx, piv_grams in enumerate(pivot_ngrams):
-#     pref_r = ngram_prefix_set[idx]
-#     pref_s = pref_qngrams
+for idx, piv_grams in enumerate(pivot_ngrams):
+    pref_r = ngram_prefix_set[idx]
+    query = 'yotubecom'
     
-#     if occurence_map.get(pref_r[-1][0], 1) > occurence_map.get(pref_s[-1][0], 1):
-#         if set(p[0] for p in query_pivots) & set(p[0] for p in pref_r) == set():
-#             print('Piv prefix filtered out', db[idx], ukkonen.distance(db[idx], query, threshold + 1))
-#     else:
-#         if set(p[0] for p in piv_grams) & set(p[0] for p in pref_qngrams) == set():
-#             print('Piv prefix filtered out', db[idx], ukkonen.distance(db[idx], query, threshold + 1))
+    qngrams = ngramify(query, n, threshold)
+    pref_qngrams = prefix_selection(qngrams, threshold)
+    
+    pfset = pref_qngrams.copy()
+    pfset.sort(key=lambda x: x[1])
+    pfset_weights = [0] * len(pfset)
+    for t in range(threshold + 1):
+        for idx, (qgram, _) in enumerate(pfset):
+            pfset_weights[idx] += len(pref_ivx[t].get(qgram, []))
+    
+    last_pref = (n * threshold + 1) - 1
+    query_pivots = pivots_selection(pfset, threshold, pfset_weights)
+    pref_s = pref_qngrams
+    
+    if occurence_map.get(pref_r[last_pref][0], [1])[0] > occurence_map.get(pref_s[last_pref][0], [1])[0]:
+        if set(p[0] for p in query_pivots) & set(p[0] for p in pref_r) == set():
+            print('Piv prefix filtered out', db[idx], ukkonen.distance(db[idx][0], query, threshold + 1))
+    else:
+        if set(p[0] for p in piv_grams) & set(p[0] for p in pref_qngrams) == set():
+            print('Piv prefix filtered out', db[idx], ukkonen.distance(db[idx][0], query, threshold + 1))
 
 
 # qdb = [f'{query},2']
@@ -297,11 +315,11 @@ def query_return_results(qword):
             
             listings = piv_ivx[t][qpref_gram]
             last_gram_idx = (n * t + 1) - 1
-            # start = piv_len_map[t].get(qpref_gram, dict()).get(len(query) - threshold, 0)
-            # end = piv_len_map[t].get(qpref_gram, dict()).get(len(query) + threshold + 1, len(piv_len_map[t].get(qpref_gram, dict()))) - 1
+            start = piv_len_map[t].get(qpref_gram, dict()).get(len(query) - t, 0)
+            end = piv_len_map[t].get(qpref_gram, dict()).get(len(query) + t + 1, len(piv_len_map[t].get(qpref_gram, dict()))) - 1
             
             for rec_id, cpos in listings:
-                if global_order_sort(ngram_prefix_set[rec_id][last_gram_idx][0]) <= global_order_sort(pref_qngrams[last_gram_idx][0]) \
+                if global_order_sort(ngram_prefix_set[rec_id][last_gram_idx][0]) > global_order_sort(pref_qngrams[last_gram_idx][0]) \
                     and abs(cpos - qgram_pos) <= threshold:
                         candidate_set.add(rec_id)
 
@@ -314,11 +332,11 @@ def query_return_results(qword):
             listings = pref_ivx[t][qpiv_gram]
             last_gram_idx = (n * t + 1) - 1
             
-            # start = pref_len_map[t].get(qpiv_gram, dict()).get(len(query) - threshold, 0)
-            # end = pref_len_map[t].get(qpiv_gram, dict()).get(len(query) + threshold + 1, len(pref_len_map[t].get(qpiv_gram, dict()))) - 1
+            start = pref_len_map[t].get(qpiv_gram, dict()).get(len(query) - t, 0)
+            end = pref_len_map[t].get(qpiv_gram, dict()).get(len(query) + t + 1, len(pref_len_map[t].get(qpiv_gram, dict()))) - 1
             # for i in range(start, end + 1):
             for rec_id, cpos in listings:
-                if global_order_sort(ngram_prefix_set[rec_id][last_gram_idx][0]) > global_order_sort(pref_qngrams[last_gram_idx][0]) \
+                if global_order_sort(ngram_prefix_set[rec_id][last_gram_idx][0]) <= global_order_sort(pref_qngrams[last_gram_idx][0]) \
                     and abs(cpos - qpiv_pos) <= threshold:
                         candidate_set.add(rec_id)
 
@@ -352,17 +370,17 @@ def query_return_results(qword):
 
 
 
-with multiprocessing.Pool(6) as p:
-    results = p.map(query_return_results, qdb)
-    lve_sum = sum(l[0] for l in results)
-    missing = sum(l[1] for l in results)
+# with multiprocessing.Pool(6) as p:
+#     results = p.map(query_return_results, qdb)
+#     lve_sum = sum(l[0] for l in results)
+#     missing = sum(l[1] for l in results)
 
-
-# print(query_return_results('Ozero Umay,1'))
+# for q in qdb:
+#     print(query_return_results(q))
     # real_ones = []query_return_results('Bogomolovo,1')
 # Diff in candidates for query Bogomolovo is: 1 {'Bogomolov'}
 
 
 
-print('Result sum: ', lve_sum, 'missing', missing, 'together', missing + lve_sum)
+# print('Result sum: ', lve_sum, 'missing', missing, 'together', missing + lve_sum)
 
