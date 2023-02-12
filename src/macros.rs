@@ -196,6 +196,7 @@ macro_rules! filtering {
             true_filter_chunks
                 .par_iter_mut()
                 .for_each(|fchunk| fchunk.index_chunks(&occurrences));
+            // println!("Sorting for indexes took {}ms", start.elapsed().as_millis());
 
             let tset_map = tset.clone();
             let mut partial_indexes: Vec<HashMap<i32, Vec<(usize, usize)>>> = tset
@@ -233,7 +234,7 @@ macro_rules! filtering {
             //         t += 1;
             //     }
             // }
-            println!("Building indexes took {}ms", start.elapsed().as_millis());
+            // println!("Building indexes took {}ms", start.elapsed().as_millis());
 
             query_ngrams = $querydata
                 .clone()
