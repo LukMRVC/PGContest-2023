@@ -88,16 +88,9 @@ macro_rules! query {
                     let t2 = *t * 2;
                     let mut match_set: Vec<(i32, usize, usize)> = Vec::with_capacity(128);
 
-                    let srchdata_len = $srchdata.len();
-                    let start_idx = *$len_map.get(&qwlen.saturating_sub(*t)).unwrap_or(&0);
-                    let end_idx = $len_map.get(&(qwlen + *t + 1)).unwrap_or(&srchdata_len);
-                    let idx_diff = *end_idx - start_idx;
-
                     let sum: usize = $srchdata
                         .iter()
                         .enumerate()
-                        .skip(start_idx)
-                        .take(idx_diff)
                         .filter(|(wid, _)| <$gramtype>::dist(&$srchgrams[*wid], &query_qgram) <= t2)
                         .filter(|(wid, _)| {
                             $true_filter_chunks[*wid].matches(
@@ -125,17 +118,10 @@ macro_rules! query {
                     let qwbytes = query_word.as_bytes();
                     let query_qgram = <$gramtype>::new(qwbytes);
                     let t2 = *t * 2;
-                    let srchdata_len = $srchdata.len();
-
-                    let start_idx = *$len_map.get(&qwlen.saturating_sub(*t)).unwrap_or(&0);
-                    let end_idx = $len_map.get(&(qwlen + *t + 1)).unwrap_or(&srchdata_len);
-                    let idx_diff = *end_idx - start_idx;
 
                     let sum: usize = $srchdata
                         .par_iter()
                         .enumerate()
-                        .skip(start_idx)
-                        .take(idx_diff)
                         .filter(|(wid, _)| <$gramtype>::dist(&$srchgrams[*wid], &query_qgram) <= t2)
                         .map(|(_, word)| ukkonen_map(word.1, &word.0, qwlen, qwbytes, t + 1))
                         .sum();

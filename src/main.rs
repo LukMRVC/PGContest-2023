@@ -97,18 +97,6 @@ fn read<R: std::io::Read>(file: R) {
     // }
 
     // perform jump search
-    let mut last_len = srchdata[0].0.len();
-    len_map.insert(last_len, 0);
-    for i in (0..srchdata.len()).step_by(8) {
-        if srchdata[i].0.len() > last_len {
-            let mut j = 1;
-            while srchdata[i - j].0.len() != last_len {
-                j += 1;
-            }
-            last_len = srchdata[i - j + 1].0.len();
-            len_map.insert(last_len, i - j + 1);
-        }
-    }
 
     // dbg!(len_distribution);
     // dbg!(&len_map);
@@ -146,6 +134,18 @@ fn read<R: std::io::Read>(file: R) {
             5
         );
     } else {
+        let mut last_len = srchdata[0].0.len();
+        len_map.insert(last_len, 0);
+        for i in (0..srchdata.len()).step_by(8) {
+            if srchdata[i].0.len() > last_len {
+                let mut j = 1;
+                while srchdata[i - j].0.len() != last_len {
+                    j += 1;
+                }
+                last_len = srchdata[i - j + 1].0.len();
+                len_map.insert(last_len, i - j + 1);
+            }
+        }
         sum = macros::filtering!(querydata, srchdata, len_map, Qgram, false, true, 3);
     }
 
