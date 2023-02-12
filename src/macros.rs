@@ -237,7 +237,7 @@ macro_rules! filtering {
 
             indexes.par_iter_mut().for_each(|ivx| {
                 for listings in ivx.values_mut() {
-                    listings.sort_by_key(|&(_, a)| a)
+                    listings.par_sort_by_key(|&(_, a)| a)
                 }
             });
             // dbg!(&indexes[0]);
