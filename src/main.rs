@@ -105,9 +105,9 @@ fn read<R: std::io::Read>(file: R) {
     // println!("Mean rec len is {}", mean_record_length);
     // let srchdata_lenghts: Vec<usize> = srchdata.par_iter().map(|line| line.len()).collect();
     // let deviation = statistics::std_dev(&srchdata_lenghts, data_mean);
-    let mut max_threshold = usize::MIN;
+    // let mut max_threshold = usize::MIN;
     // threshold set
-    // let mut tset: BTreeSet<usize> = BTreeSet::default();
+    let mut tset: BTreeSet<usize> = BTreeSet::default();
 
     while let Some(line) = reader.next_line() {
         let line = line.expect("read error");
@@ -117,14 +117,16 @@ fn read<R: std::io::Read>(file: R) {
             panic!("Cannot split!");
         };
         let t: usize = t.parse().unwrap();
-        // tset.insert(t);
-        if t > max_threshold {
-            max_threshold = t;
-        }
+        tset.insert(t);
+        // if t > max_threshold {
+        //     max_threshold = t;
+        // }
         querydata.push((query_word.to_owned(), t));
     }
 
     let mut sum: usize = 0;
+    let mxt = tset.last().unwrap();
+    tset.insert(mxt + 1);
 
     if is_dna {
         sum = macros::filtering!(
@@ -132,7 +134,7 @@ fn read<R: std::io::Read>(file: R) {
             srchdata,
             len_map,
             DNAQgram,
-            max_threshold,
+            tset,
             srchdata.len() >= 250_000 || querydata.len() > 150,
             false,
             5
@@ -150,16 +152,7 @@ fn read<R: std::io::Read>(file: R) {
                 len_map.insert(last_len, i - j + 1);
             }
         }
-        sum = macros::filtering!(
-            querydata,
-            srchdata,
-            len_map,
-            Qgram,
-            max_threshold,
-            false,
-            true,
-            2
-        );
+        sum = macros::filtering!(querydata, srchdata, len_map, Qgram, tset, false, true, 2);
     }
 
     println!("{sum}");
