@@ -125,9 +125,13 @@ fn read<R: std::io::Read>(file: R) {
 
     if is_dna {
         sum = macros::filtering!(
-            querydata, srchdata, len_map, DNAQgram,
-            true, // srchdata.len() >= 250_000 || querydata.len() > 150,
-            false, 5
+            querydata,
+            srchdata,
+            len_map,
+            DNAQgram,
+            srchdata.len() >= 250_000 || querydata.len() > 150,
+            false,
+            5
         );
     } else {
         let mut last_len = srchdata[0].0.len();

@@ -95,7 +95,7 @@ macro_rules! query {
                             let maybe_listings = $indexes[ct].get(sig);
                             if let Some(listings) = maybe_listings {
                                 for (cid, cpos) in listings {
-                                    if cpos.abs_diff(*sig_pos) <= ct {
+                                    if cpos.abs_diff(*sig_pos) <= *t {
                                         candidates.insert(*cid);
                                     }
                                 }
@@ -103,7 +103,7 @@ macro_rules! query {
                         }
                     }
 
-                    // let mut candidates: Vec<usize> = candidates.drain().collect();
+                    let mut candidates: Vec<usize> = candidates.drain().collect();
                     // candidates.sort();
                     let sum: usize = candidates.iter()
                         .filter(|c| <$gramtype>::dist(&$srchgrams[**c], &query_qgram) <= t2)
@@ -178,7 +178,7 @@ macro_rules! filtering {
             let start = std::time::Instant::now();
             let mut occurrences: BTreeMap<i32, usize> = BTreeMap::default();
 
-            let percent_count = ($srchdata.len() as f32 * 0.25).floor() as usize;
+            let percent_count = ($srchdata.len() as f32 * 0.2).floor() as usize;
             let percent_iteration = ($srchdata.len() / percent_count);
             // get occurences map to get global ordering
             for i in (0..true_filter_chunks.len()).step_by(percent_iteration) {
@@ -205,7 +205,7 @@ macro_rules! filtering {
                     t += 1;
                 }
             }
-            println!("Building indexes took {}ms", start.elapsed().as_millis());
+            // println!("Building indexes took {}ms", start.elapsed().as_millis());
 
             query_ngrams = $querydata
                 .clone()
