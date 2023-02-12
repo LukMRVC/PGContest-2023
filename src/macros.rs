@@ -158,7 +158,7 @@ macro_rules! query {
 
 // The syntax for filtering will be (querydata, srchdata, is_dna, use_true_match_filter, use_length_filter)
 macro_rules! filtering {
-    ($querydata:ident, $srchdata:ident, $len_map:ident, $gramtype:ty, $use_true_match:expr, $use_length_filter:expr, $n:expr) => {{
+    ($querydata:ident, $srchdata:ident, $len_map:ident, $gramtype:ty, $max_threshold:ident, $use_true_match:expr, $use_length_filter:expr, $n:expr) => {{
         let srchgrams: Vec<$gramtype> = $srchdata
             .par_iter()
             .map(|data| <$gramtype>::new(&data.0))
@@ -166,16 +166,16 @@ macro_rules! filtering {
 
         let mut true_filter_chunks: Vec<TrueMatchFilter> = vec![];
         let mut query_ngrams: Vec<Vec<(i32, usize)>> = vec![];
-        let max_threshold = 15;
+        // let max_threshold = $tset.last().unwrap();
         let mut indexes: Vec<FxHashMap<i32, Vec<(usize, usize)>>> =
-            vec![FxHashMap::default(); max_threshold + 1];
+            vec![FxHashMap::default(); $max_threshold + 1];
         if $use_true_match {
             true_filter_chunks = $srchdata
                 .par_iter()
                 .map(|record| record_to_chunk_filter(&record.0, $n))
                 .collect();
 
-            let start = std::time::Instant::now();
+            // let start = std::time::Instant::now();
             let mut occurrences: BTreeMap<i32, usize> = BTreeMap::default();
 
             let percent_count = ($srchdata.len() as f32 * 0.2).floor() as usize;
@@ -197,7 +197,7 @@ macro_rules! filtering {
 
             for (id, record) in true_filter_chunks.iter().enumerate() {
                 let mut t = 0;
-                for (chunk, chunk_pos) in record.chunks.iter().take(max_threshold + 1) {
+                for (chunk, chunk_pos) in record.chunks.iter().take($max_threshold + 1) {
                     indexes[t]
                         .entry(*chunk)
                         .and_modify(|listings| listings.push((id, *chunk_pos)))

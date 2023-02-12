@@ -6,7 +6,7 @@ mod ukkonen;
 use fxhash::{FxHashMap, FxHashSet};
 use linereader::LineReader;
 use rayon::prelude::*;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::env;
 use std::fs::File;
 use std::io::{prelude::*, stdin, stdout};
@@ -106,6 +106,8 @@ fn read<R: std::io::Read>(file: R) {
     // let srchdata_lenghts: Vec<usize> = srchdata.par_iter().map(|line| line.len()).collect();
     // let deviation = statistics::std_dev(&srchdata_lenghts, data_mean);
     let mut max_threshold = usize::MIN;
+    // threshold set
+    // let mut tset: BTreeSet<usize> = BTreeSet::default();
 
     while let Some(line) = reader.next_line() {
         let line = line.expect("read error");
@@ -115,6 +117,7 @@ fn read<R: std::io::Read>(file: R) {
             panic!("Cannot split!");
         };
         let t: usize = t.parse().unwrap();
+        // tset.insert(t);
         if t > max_threshold {
             max_threshold = t;
         }
@@ -129,6 +132,7 @@ fn read<R: std::io::Read>(file: R) {
             srchdata,
             len_map,
             DNAQgram,
+            max_threshold,
             srchdata.len() >= 250_000 || querydata.len() > 150,
             false,
             5
@@ -146,7 +150,16 @@ fn read<R: std::io::Read>(file: R) {
                 len_map.insert(last_len, i - j + 1);
             }
         }
-        sum = macros::filtering!(querydata, srchdata, len_map, Qgram, true, true, 2);
+        sum = macros::filtering!(
+            querydata,
+            srchdata,
+            len_map,
+            Qgram,
+            max_threshold,
+            true,
+            true,
+            2
+        );
     }
 
     println!("{sum}");
