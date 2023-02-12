@@ -88,7 +88,6 @@ fn read<R: std::io::Read>(file: R) {
     }
 
     let mut len_map = BTreeMap::<usize, usize>::new();
-    srchdata.par_sort_unstable_by(|a, b| a.0.len().cmp(&b.0.len()));
 
     // let mut cummulative_count = 0;
     // for l in 0..=(*len_distribution.keys().max().unwrap()) {
@@ -137,6 +136,7 @@ fn read<R: std::io::Read>(file: R) {
             5
         );
     } else {
+        srchdata.par_sort_unstable_by(|a, b| a.0.len().cmp(&b.0.len()));
         let mut last_len = srchdata[0].0.len();
         len_map.insert(last_len, 0);
         for i in (0..srchdata.len()).step_by(8) {
