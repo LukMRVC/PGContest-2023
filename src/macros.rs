@@ -200,10 +200,15 @@ macro_rules! filtering {
             let tset_map = tset.clone();
             let mut partial_indexes: Vec<FxHashMap<i32, Vec<(usize, usize)>>> = tset
                 .par_iter()
-                .map(|t| {
+                .enumerate()
+                .map(|(i, t)| {
+                    let previous_t = tset_map.get(i.saturating_sub(1)).unwrap_or(&0);
+                    let df = t - previous_t + 1;
                     let mut index: FxHashMap<i32, Vec<(usize, usize)>> = FxHashMap::default();
                     for (id, record) in true_filter_chunks.iter().enumerate() {
-                        if let Some((chunk, chunk_pos)) = record.chunks.get(*t) {
+                        for (chunk, chunk_pos) in
+                            record.indexed_chunks.iter().skip(*previous_t).take(df)
+                        {
                             index
                                 .entry(*chunk)
                                 .and_modify(|listings| listings.push((id, *chunk_pos)))

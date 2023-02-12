@@ -81,7 +81,7 @@ fn rank(slice: &[u8], n: usize) -> i32 {
 pub struct TrueMatchFilter {
     lbstr: usize,
     pub chunks: Vec<(i32, usize)>,
-    indexed_chunks: Vec<(i32, usize)>,
+    pub indexed_chunks: Vec<(i32, usize)>,
     n: usize,
 }
 
