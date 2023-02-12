@@ -6,7 +6,7 @@ mod ukkonen;
 use fxhash::{FxHashMap, FxHashSet};
 use linereader::LineReader;
 use rayon::prelude::*;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::env;
 use std::fs::File;
 use std::io::{prelude::*, stdin, stdout};
