@@ -3,6 +3,7 @@ mod macros;
 mod statistics;
 mod ukkonen;
 
+use fxhash::{FxHashMap, FxHashSet};
 use linereader::LineReader;
 use rayon::prelude::*;
 use std::collections::BTreeMap;
@@ -49,10 +50,8 @@ fn read<R: std::io::Read>(file: R) {
     let srch_line_bytes = srch_line.as_bytes();
     let mut reader = LineReader::with_capacity(1024 * 1024, file);
     let mut is_dna: bool = true;
-    let mut len_sum = 0;
 
     let mut str_id = 1;
-    let start = std::time::Instant::now();
     let mut min_line_len = usize::MAX;
     // let mut len_distribution: BTreeMap<usize, usize> = BTreeMap::new();
 
@@ -64,7 +63,7 @@ fn read<R: std::io::Read>(file: R) {
         }
         srchdata.push((line.to_owned(), str_id));
         str_id += 1;
-        len_sum += line.len();
+        // len_sum += line.len();
         if line.len() < min_line_len {
             min_line_len = line.len();
         }
@@ -90,6 +89,7 @@ fn read<R: std::io::Read>(file: R) {
 
     let mut len_map = BTreeMap::<usize, usize>::new();
     srchdata.par_sort_unstable_by(|a, b| a.0.len().cmp(&b.0.len()));
+
     // let mut cummulative_count = 0;
     // for l in 0..=(*len_distribution.keys().max().unwrap()) {
     //     len_map.insert(l, cummulative_count);
@@ -105,7 +105,7 @@ fn read<R: std::io::Read>(file: R) {
     // println!("Mean rec len is {}", mean_record_length);
     // let srchdata_lenghts: Vec<usize> = srchdata.par_iter().map(|line| line.len()).collect();
     // let deviation = statistics::std_dev(&srchdata_lenghts, data_mean);
-    let mut max_treshold = usize::MIN;
+    let mut max_threshold = usize::MIN;
 
     while let Some(line) = reader.next_line() {
         let line = line.expect("read error");
@@ -115,8 +115,8 @@ fn read<R: std::io::Read>(file: R) {
             panic!("Cannot split!");
         };
         let t: usize = t.parse().unwrap();
-        if t > max_treshold {
-            max_treshold = t;
+        if t > max_threshold {
+            max_threshold = t;
         }
         querydata.push((query_word.to_owned(), t));
     }
@@ -125,13 +125,9 @@ fn read<R: std::io::Read>(file: R) {
 
     if is_dna {
         sum = macros::filtering!(
-            querydata,
-            srchdata,
-            len_map,
-            DNAQgram,
-            srchdata.len() >= 250_000 || querydata.len() > 150,
-            false,
-            5
+            querydata, srchdata, len_map, DNAQgram,
+            true, // srchdata.len() >= 250_000 || querydata.len() > 150,
+            false, 5
         );
     } else {
         let mut last_len = srchdata[0].0.len();
@@ -146,10 +142,10 @@ fn read<R: std::io::Read>(file: R) {
                 len_map.insert(last_len, i - j + 1);
             }
         }
-        sum = macros::filtering!(querydata, srchdata, len_map, Qgram, false, true, 3);
+        sum = macros::filtering!(querydata, srchdata, len_map, Qgram, true, true, 2);
     }
 
-    println!("{}", sum);
+    println!("{sum}");
     stdout().flush().unwrap();
 }
 

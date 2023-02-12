@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 const TRANSLATE_MAP: [i32; 256] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 16
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 52, // 32
@@ -78,7 +80,8 @@ fn rank(slice: &[u8], n: usize) -> i32 {
 
 pub struct TrueMatchFilter {
     lbstr: usize,
-    chunks: Vec<(i32, usize)>,
+    pub chunks: Vec<(i32, usize)>,
+    indexed_chunks: Vec<(i32, usize)>,
     n: usize,
 }
 
@@ -86,9 +89,21 @@ impl TrueMatchFilter {
     pub fn new(word: &[u8], n: usize) -> Self {
         Self {
             chunks: nchunks(word, n),
+            indexed_chunks: vec![],
             lbstr: (word.len() + n - 1) / n,
             n,
         }
+    }
+
+    // preprocesses the chunks for indexing
+    pub fn index_chunks(&mut self, occurences: &BTreeMap<i32, usize>) {
+        self.indexed_chunks = self.chunks.clone();
+        self.indexed_chunks.sort_by(|a, b| {
+            occurences
+                .get(&a.0)
+                .unwrap_or(&1)
+                .cmp(occurences.get(&b.0).unwrap_or(&1))
+        })
     }
 
     pub fn matches(
