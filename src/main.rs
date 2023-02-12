@@ -54,7 +54,7 @@ fn read<R: std::io::Read>(file: R) {
     let mut str_id = 1;
     let start = std::time::Instant::now();
     let mut min_line_len = usize::MAX;
-    let mut len_distribution: BTreeMap<usize, usize> = BTreeMap::new();
+    // let mut len_distribution: BTreeMap<usize, usize> = BTreeMap::new();
 
     while let Some(line) = reader.next_line() {
         let line = line.expect("read error");
@@ -69,11 +69,11 @@ fn read<R: std::io::Read>(file: R) {
             min_line_len = line.len();
         }
 
-        if let Some(count) = len_distribution.get_mut(&line.len()) {
-            *count += 1;
-        } else {
-            len_distribution.insert(line.len(), 1);
-        }
+        // if let Some(count) = len_distribution.get_mut(&line.len()) {
+        //     *count += 1;
+        // } else {
+        //     len_distribution.insert(line.len(), 1);
+        // }
     }
     // start.elapsed().as_millis()
 
@@ -90,11 +90,26 @@ fn read<R: std::io::Read>(file: R) {
 
     let mut len_map = BTreeMap::<usize, usize>::new();
     srchdata.par_sort_unstable_by(|a, b| a.0.len().cmp(&b.0.len()));
-    let mut cummulative_count = 0;
-    for l in 0..=(*len_distribution.keys().max().unwrap()) {
-        len_map.insert(l, cummulative_count);
-        cummulative_count += len_distribution.get(&l).unwrap_or(&0);
+    // let mut cummulative_count = 0;
+    // for l in 0..=(*len_distribution.keys().max().unwrap()) {
+    //     len_map.insert(l, cummulative_count);
+    //     cummulative_count += len_distribution.get(&l).unwrap_or(&0);
+    // }
+
+    // perform jump search
+    let mut last_len = srchdata[0].0.len();
+    len_map.insert(last_len, 0);
+    for i in (0..srchdata.len()).step_by(8) {
+        if srchdata[i].0.len() > last_len {
+            let mut j = 1;
+            while srchdata[i - j].0.len() != last_len {
+                j += 1;
+            }
+            last_len = srchdata[i - j + 1].0.len();
+            len_map.insert(last_len, i - j + 1);
+        }
     }
+
     // dbg!(len_distribution);
     // dbg!(&len_map);
 
