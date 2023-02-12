@@ -94,7 +94,35 @@ macro_rules! query {
                         for (sig, sig_pos) in querygrams.iter() {
                             let maybe_listings = $indexes[ct].get(sig);
                             if let Some(listings) = maybe_listings {
-                                for (cid, cpos) in listings {
+                                // let mut sk = 0;
+                                // let mut end = listings.len() - 1;
+                                // for i in (0..listings.len()).step_by(4) {
+                                //     if listings[i].1.abs_diff(*sig_pos) <= *t {
+                                //         let mut j = 1;
+                                //         while listings[i - j].1.abs_diff(*sig_pos) <= *t && {
+                                //             j += 1;
+                                //         }
+                                //         sk = i - j + 1;
+                                //         break;
+                                //     }
+                                // }
+
+                                // for i in (0..listings.len()).skip(sk).step_by(4) {
+                                //     if i > listings.len() {
+                                //         end = listings.len() - 1;
+                                //         break;
+                                //     }
+                                //     if listings[i].1.abs_diff(*sig_pos) > *t {
+                                //         let mut j = 1;
+                                //         while listings[i - j].1.abs_diff(*sig_pos) > *t {
+                                //             j += 1;
+                                //         }
+                                //         end = i - j + 1;
+                                //         break;
+                                //     }
+                                // }
+
+                                for (cid, cpos) in listings.iter() {
                                     if cpos.abs_diff(*sig_pos) <= *t {
                                         candidates.insert(*cid);
                                     }
@@ -237,7 +265,7 @@ macro_rules! filtering {
 
             indexes.par_iter_mut().for_each(|ivx| {
                 for listings in ivx.values_mut() {
-                    listings.par_sort_by_key(|&(_, a)| a)
+                    listings.sort_by_key(|&(_, a)| a)
                 }
             });
             // dbg!(&indexes[0]);
