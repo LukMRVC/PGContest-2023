@@ -178,63 +178,62 @@ macro_rules! filtering {
                 .collect();
 
             let start = std::time::Instant::now();
-            let mut occurrences: BTreeMap<i32, usize> = BTreeMap::default();
+            // let mut occurrences: BTreeMap<i32, usize> = BTreeMap::default();
 
-            let percent_count = ($srchdata.len() as f32 * 0.4).floor() as usize;
-            let percent_iteration = ($srchdata.len() / percent_count);
-            // get occurences map to get global ordering
-            for i in (0..true_filter_chunks.len()).step_by(percent_iteration) {
-                for (chunk, _) in &true_filter_chunks[i].chunks {
-                    occurrences
-                        .entry(*chunk)
-                        .and_modify(|e| *e += 1)
-                        .or_insert(1);
-                }
-            }
-
-            // sort by occurence
-            true_filter_chunks
-                .par_iter_mut()
-                .for_each(|fchunk| fchunk.index_chunks(&occurrences));
-            // println!("Sorting for indexes took {}ms", start.elapsed().as_millis());
-
-            let tset_map = tset.clone();
-            let mut partial_indexes: Vec<HashMap<i32, Vec<(usize, usize)>>> = tset
-                .par_iter()
-                .enumerate()
-                .map(|(i, t)| {
-                    let previous_t = tset_map.get(i.saturating_sub(1)).unwrap_or(&0);
-                    let df = t - previous_t + 1;
-                    let mut index: HashMap<i32, Vec<(usize, usize)>> = HashMap::default();
-                    for (id, record) in true_filter_chunks.iter().enumerate() {
-                        for (chunk, chunk_pos) in
-                            record.indexed_chunks.iter().skip(*previous_t).take(df)
-                        {
-                            index
-                                .entry(*chunk)
-                                .and_modify(|listings| listings.push((id, *chunk_pos)))
-                                .or_insert(vec![(id, *chunk_pos)]);
-                        }
-                    }
-                    return index;
-                })
-                .collect();
-
-            for t in tset_map.iter() {
-                indexes[*t] = partial_indexes.remove(0);
-            }
-
-            // for (id, record) in true_filter_chunks.iter().enumerate() {
-            //     let mut t = 0;
-            //     for (chunk, chunk_pos) in record.chunks.iter().take(*max_threshold) {
-            //         indexes[t]
+            // let percent_count = ($srchdata.len() as f32 * 0.4).floor() as usize;
+            // let percent_iteration = ($srchdata.len() / percent_count);
+            // // get occurences map to get global ordering
+            // for i in (0..true_filter_chunks.len()).step_by(percent_iteration) {
+            //     for (chunk, _) in &true_filter_chunks[i].chunks {
+            //         occurrences
             //             .entry(*chunk)
-            //             .and_modify(|listings| listings.push((id, *chunk_pos)))
-            //             .or_insert(vec![(id, *chunk_pos)]);
-            //         t += 1;
+            //             .and_modify(|e| *e += 1)
+            //             .or_insert(1);
             //     }
             // }
+
+            // sort by occurence
+            // true_filter_chunks
+            //     .par_iter_mut()
+            //     .for_each(|fchunk| fchunk.index_chunks(&occurrences));
+            // println!("Sorting for indexes took {}ms", start.elapsed().as_millis());
+
+            // let tset_map = tset.clone();
+            // let mut partial_indexes: Vec<HashMap<i32, Vec<(usize, usize)>>> = tset
+            //     .par_iter()
+            //     .enumerate()
+            //     .map(|(i, t)| {
+            //         let previous_t = tset_map.get(i.saturating_sub(1)).unwrap_or(&0);
+            //         let df = t - previous_t + 1;
+            //         let mut index: HashMap<i32, Vec<(usize, usize)>> = HashMap::default();
+            //         for (id, record) in true_filter_chunks.iter().enumerate() {
+            //             for (chunk, chunk_pos) in record.chunks.iter().skip(*previous_t).take(df) {
+            //                 index
+            //                     .entry(*chunk)
+            //                     .and_modify(|listings| listings.push((id, *chunk_pos)))
+            //                     .or_insert(vec![(id, *chunk_pos)]);
+            //             }
+            //         }
+            //         return index;
+            //     })
+            //     .collect();
             // println!("Building indexes took {}ms", start.elapsed().as_millis());
+
+            // for t in tset_map.iter() {
+            //     indexes[*t] = partial_indexes.remove(0);
+            // }
+
+            for (id, record) in true_filter_chunks.iter().enumerate() {
+                let mut t = 0;
+                for (chunk, chunk_pos) in record.chunks.iter().take(*max_threshold) {
+                    indexes[t]
+                        .entry(*chunk)
+                        .and_modify(|listings| listings.push((id, *chunk_pos)))
+                        .or_insert(vec![(id, *chunk_pos)]);
+                    t += 1;
+                }
+            }
+            // println!("Resorting indexes took {}ms", start.elapsed().as_millis());
 
             query_ngrams = $querydata
                 .clone()
