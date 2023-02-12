@@ -156,7 +156,7 @@ fn read<R: std::io::Read>(file: R) {
             len_map,
             Qgram,
             max_threshold,
-            true,
+            false,
             true,
             2
         );
