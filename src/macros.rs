@@ -103,7 +103,7 @@ macro_rules! query {
                         }
                     }
 
-                    let mut candidates: Vec<usize> = candidates.drain().collect();
+                    let candidates: Vec<usize> = candidates.drain().collect();
                     // candidates.sort();
                     let sum: usize = candidates.iter()
                         .filter(|c| <$gramtype>::dist(&$srchgrams[**c], &query_qgram) <= t2)
@@ -166,8 +166,11 @@ macro_rules! filtering {
 
         let mut true_filter_chunks: Vec<TrueMatchFilter> = vec![];
         let mut query_ngrams: Vec<Vec<(i32, usize)>> = vec![];
+        let tset: Vec<usize> = Vec::from_iter($tset.into_iter());
+
+        let max_threshold = tset.last().unwrap();
         let mut indexes: Vec<FxHashMap<i32, Vec<(usize, usize)>>> =
-            vec![FxHashMap::default(); *$tset.last().unwrap() + 1];
+            vec![FxHashMap::default(); max_threshold + 1];
         if $use_true_match {
             true_filter_chunks = $srchdata
                 .par_iter()
@@ -194,7 +197,6 @@ macro_rules! filtering {
                 .par_iter_mut()
                 .for_each(|fchunk| fchunk.index_chunks(&occurrences));
 
-            let tset: Vec<usize> = Vec::from_iter($tset.into_iter());
             let tset_map = tset.clone();
             let mut partial_indexes: Vec<FxHashMap<i32, Vec<(usize, usize)>>> = tset
                 .par_iter()

@@ -123,10 +123,7 @@ fn read<R: std::io::Read>(file: R) {
         // }
         querydata.push((query_word.to_owned(), t));
     }
-
     let mut sum: usize = 0;
-    let mxt = tset.last().unwrap();
-    tset.insert(mxt + 1);
 
     if is_dna {
         sum = macros::filtering!(
