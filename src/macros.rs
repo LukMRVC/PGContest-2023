@@ -169,8 +169,8 @@ macro_rules! filtering {
         let tset: Vec<usize> = Vec::from_iter($tset.into_iter());
 
         let max_threshold = tset.last().unwrap();
-        let mut indexes: Vec<FxHashMap<i32, Vec<(usize, usize)>>> =
-            vec![FxHashMap::default(); max_threshold + 1];
+        let mut indexes: Vec<HashMap<i32, Vec<(usize, usize)>>> =
+            vec![HashMap::default(); max_threshold + 1];
         if $use_true_match {
             true_filter_chunks = $srchdata
                 .par_iter()
@@ -198,13 +198,13 @@ macro_rules! filtering {
                 .for_each(|fchunk| fchunk.index_chunks(&occurrences));
 
             let tset_map = tset.clone();
-            let mut partial_indexes: Vec<FxHashMap<i32, Vec<(usize, usize)>>> = tset
+            let mut partial_indexes: Vec<HashMap<i32, Vec<(usize, usize)>>> = tset
                 .par_iter()
                 .enumerate()
                 .map(|(i, t)| {
                     let previous_t = tset_map.get(i.saturating_sub(1)).unwrap_or(&0);
                     let df = t - previous_t + 1;
-                    let mut index: FxHashMap<i32, Vec<(usize, usize)>> = FxHashMap::default();
+                    let mut index: HashMap<i32, Vec<(usize, usize)>> = HashMap::default();
                     for (id, record) in true_filter_chunks.iter().enumerate() {
                         for (chunk, chunk_pos) in
                             record.indexed_chunks.iter().skip(*previous_t).take(df)
