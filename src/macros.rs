@@ -104,6 +104,7 @@ macro_rules! query {
                     }
 
                     let candidates: Vec<usize> = candidates.drain().collect();
+                    // println!("Got {} candidates", candidates.len());
                     // candidates.sort();
                     let sum: usize = candidates.iter()
                         .filter(|c| <$gramtype>::dist(&$srchgrams[**c], &query_qgram) <= t2)
@@ -233,6 +234,13 @@ macro_rules! filtering {
                     t += 1;
                 }
             }
+
+            indexes.par_iter_mut().for_each(|ivx| {
+                for listings in ivx.values_mut() {
+                    listings.sort_by_key(|&(_, a)| a)
+                }
+            });
+            // dbg!(&indexes[0]);
             // println!("Resorting indexes took {}ms", start.elapsed().as_millis());
 
             query_ngrams = $querydata
