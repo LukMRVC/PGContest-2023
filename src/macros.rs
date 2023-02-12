@@ -175,7 +175,7 @@ macro_rules! filtering {
                 .map(|record| record_to_chunk_filter(&record.0, $n))
                 .collect();
 
-            // let start = std::time::Instant::now();
+            let start = std::time::Instant::now();
             let mut occurrences: BTreeMap<i32, usize> = BTreeMap::default();
 
             let percent_count = ($srchdata.len() as f32 * 0.2).floor() as usize;
@@ -205,7 +205,7 @@ macro_rules! filtering {
                     t += 1;
                 }
             }
-            // println!("Building indexes took {}ms", start.elapsed().as_millis());
+            println!("Building indexes took {}ms", start.elapsed().as_millis());
 
             query_ngrams = $querydata
                 .clone()
