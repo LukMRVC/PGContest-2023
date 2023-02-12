@@ -14,28 +14,51 @@ macro_rules! query {
                     let query_qgram = <$gramtype>::new(qwbytes);
                     let query_ngram_list = &$query_ngrams.get(qid);
                     let t2 = *t * 2;
-                    let mut match_set: Vec<(i32, usize, usize)> = Vec::with_capacity(128);
+                    let querygrams = query_ngram_list.unwrap();
 
-                    let srchdata_len = $srchdata.len();
-                    let start_idx = *$len_map.get(&qwlen.saturating_sub(*t)).unwrap_or(&0);
-                    let end_idx = $len_map.get(&(qwlen + *t + 1)).unwrap_or(&srchdata_len);
-                    let idx_diff = *end_idx - start_idx;
+                    let mut candidates: FxHashSet<usize> = FxHashSet::default();
+                    for ct in 0..=*t {
+                        for (sig, sig_pos) in querygrams.iter() {
+                            let maybe_listings = $indexes[ct].get(sig);
+                            if let Some(listings) = maybe_listings {
+                                for (cid, cpos) in listings.iter() {
+                                    if cpos.abs_diff(*sig_pos) <= *t {
+                                        candidates.insert(*cid);
+                                    }
+                                }
+                            }
+                        }
+                    }
 
-                    let sum: usize = $srchdata
-                        .iter()
-                        .enumerate()
-                        .skip(start_idx)
-                        .take(idx_diff)
-                        .filter(|(wid, _)| <$gramtype>::dist(&$srchgrams[*wid], &query_qgram) <= t2)
-                        .filter(|(wid, _)| {
-                            $true_filter_chunks[*wid].matches(
-                                query_ngram_list.unwrap(),
-                                *t,
-                                &mut match_set,
-                            )
-                        })
-                        .map(|(_, word)| ukkonen_map(word.1, &word.0, qwlen, qwbytes, t + 1))
-                        .sum();
+                    let candidates: Vec<usize> = candidates.drain().collect();
+                    let sum: usize = candidates.iter()
+                    .filter(|c| $srchgrams[**c].str_len.abs_diff(qwlen) <= *t && <$gramtype>::dist(&$srchgrams[**c], &query_qgram) <= t2)
+                    .map(|c| {
+                        ukkonen_map($srchdata[*c].1, &$srchdata[*c].0, qwlen, qwbytes, t + 1)
+                    })
+                    .sum();
+                    // dbg!(candidates.len());
+
+                    // let srchdata_len = $srchdata.len();
+                    // let start_idx = *$len_map.get(&qwlen.saturating_sub(*t)).unwrap_or(&0);
+                    // let end_idx = $len_map.get(&(qwlen + *t + 1)).unwrap_or(&srchdata_len);
+                    // let idx_diff = *end_idx - start_idx;
+
+                    // let sum: usize = $srchdata
+                    //     .iter()
+                    //     .enumerate()
+                    //     .skip(start_idx)
+                    //     .take(idx_diff)
+                    //     .filter(|(wid, _)| <$gramtype>::dist(&$srchgrams[*wid], &query_qgram) <= t2)
+                    //     .filter(|(wid, _)| {
+                    //         $true_filter_chunks[*wid].matches(
+                    //             query_ngram_list.unwrap(),
+                    //             *t,
+                    //             &mut match_set,
+                    //         )
+                    //     })
+                    //     .map(|(_, word)| ukkonen_map(word.1, &word.0, qwlen, qwbytes, t + 1))
+                    //     .sum();
                     acc + sum
                 },
             )
@@ -94,34 +117,6 @@ macro_rules! query {
                         for (sig, sig_pos) in querygrams.iter() {
                             let maybe_listings = $indexes[ct].get(sig);
                             if let Some(listings) = maybe_listings {
-                                // let mut sk = 0;
-                                // let mut end = listings.len() - 1;
-                                // for i in (0..listings.len()).step_by(4) {
-                                //     if listings[i].1.abs_diff(*sig_pos) <= *t {
-                                //         let mut j = 1;
-                                //         while listings[i - j].1.abs_diff(*sig_pos) <= *t && {
-                                //             j += 1;
-                                //         }
-                                //         sk = i - j + 1;
-                                //         break;
-                                //     }
-                                // }
-
-                                // for i in (0..listings.len()).skip(sk).step_by(4) {
-                                //     if i > listings.len() {
-                                //         end = listings.len() - 1;
-                                //         break;
-                                //     }
-                                //     if listings[i].1.abs_diff(*sig_pos) > *t {
-                                //         let mut j = 1;
-                                //         while listings[i - j].1.abs_diff(*sig_pos) > *t {
-                                //             j += 1;
-                                //         }
-                                //         end = i - j + 1;
-                                //         break;
-                                //     }
-                                // }
-
                                 for (cid, cpos) in listings.iter() {
                                     if cpos.abs_diff(*sig_pos) <= *t {
                                         candidates.insert(*cid);
