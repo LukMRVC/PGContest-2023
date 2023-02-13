@@ -234,7 +234,7 @@ macro_rules! filtering {
 
             let tset_map = tset.clone();
 
-            indexes = tset
+            let mut partial_indexes: Vec<HashMap<i32, Vec<(usize, usize)>>> = tset
                 .par_iter()
                 .enumerate()
                 .map(|(i, t)| {
@@ -253,6 +253,10 @@ macro_rules! filtering {
                 })
                 .collect();
             // println!("Building indexes took {}ms", start.elapsed().as_millis());
+
+            for t in tset_map.iter() {
+                indexes[*t] = partial_indexes.remove(0);
+            }
 
             // for (id, record) in true_filter_chunks.iter().enumerate() {
             //     let mut t = 0;
