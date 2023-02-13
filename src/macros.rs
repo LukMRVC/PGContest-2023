@@ -191,7 +191,6 @@ macro_rules! filtering {
         let mut true_filter_chunks: Vec<TrueMatchFilter> = vec![];
         let mut query_ngrams: Vec<Vec<(i32, usize)>> = vec![];
         let tset: Vec<usize> = Vec::from_iter($tset.into_iter());
-
         let max_threshold = tset.last().unwrap();
         let mut indexes: Vec<HashMap<i32, Vec<(usize, usize)>>> =
             vec![HashMap::default(); max_threshold + 1];
@@ -222,40 +221,38 @@ macro_rules! filtering {
             //     .for_each(|fchunk| fchunk.index_chunks(&occurrences));
             // println!("Sorting for indexes took {}ms", start.elapsed().as_millis());
 
-            // let tset_map = tset.clone();
-            indexes.par_iter_mut().enumerate().for_each(|(ct, index)| {
-                for (id, record) in true_filter_chunks.iter().enumerate() {
-                    let (chunk, chunk_pos) = &record.chunks[ct];
-                    index
-                        .entry(*chunk)
-                        .and_modify(|listings| listings.push((id, *chunk_pos)))
-                        .or_insert(vec![(id, *chunk_pos)]);
-                }
-            });
-
-            // indexes: Vec<HashMap<i32, Vec<(usize, usize)>>> = tset
-            //     .par_iter()
-            //     .enumerate()
-            //     .map(|(i, t)| {
-            //         let previous_t = tset_map.get(i.saturating_sub(1)).unwrap_or(&0);
-            //         let df = t - previous_t + 1;
-            //         let mut index: HashMap<i32, Vec<(usize, usize)>> = HashMap::default();
-            //         for (id, record) in true_filter_chunks.iter().enumerate() {
-            //             for (chunk, chunk_pos) in record.chunks.iter().skip(*previous_t).take(df) {
-            //                 index
-            //                     .entry(*chunk)
-            //                     .and_modify(|listings| listings.push((id, *chunk_pos)))
-            //                     .or_insert(vec![(id, *chunk_pos)]);
-            //             }
+            // indexes.par_iter_mut().enumerate().for_each(|(ct, index)| {
+            //     for (id, record) in true_filter_chunks.iter().enumerate() {
+            //         if let Some((chunk, chunk_pos)) = record.chunks.get(ct) {
+            //             index
+            //             .entry(*chunk)
+            //             .and_modify(|listings| listings.push((id, *chunk_pos)))
+            //             .or_insert(vec![(id, *chunk_pos)]);
             //         }
-            //         return index;
-            //     })
-            //     .collect();
-            // println!("Building indexes took {}ms", start.elapsed().as_millis());
+            //     }
+            // });
 
-            // for t in tset_map.iter() {
-            //     indexes[*t] = partial_indexes.remove(0);
-            // }
+            let tset_map = tset.clone();
+
+            indexes = tset
+                .par_iter()
+                .enumerate()
+                .map(|(i, t)| {
+                    let previous_t = tset_map.get(i.saturating_sub(1)).unwrap_or(&0);
+                    let df = t - previous_t + 1;
+                    let mut index: HashMap<i32, Vec<(usize, usize)>> = HashMap::default();
+                    for (id, record) in true_filter_chunks.iter().enumerate() {
+                        for (chunk, chunk_pos) in record.chunks.iter().skip(*previous_t).take(df) {
+                            index
+                                .entry(*chunk)
+                                .and_modify(|listings| listings.push((id, *chunk_pos)))
+                                .or_insert(vec![(id, *chunk_pos)]);
+                        }
+                    }
+                    return index;
+                })
+                .collect();
+            // println!("Building indexes took {}ms", start.elapsed().as_millis());
 
             // for (id, record) in true_filter_chunks.iter().enumerate() {
             //     let mut t = 0;
@@ -274,7 +271,7 @@ macro_rules! filtering {
             //     }
             // });
             // dbg!(&indexes[0]);
-            // println!("Resorting indexes took {}ms", start.elapsed().as_millis());
+            // println!("Building indexes took {}ms", start.elapsed().as_millis());
 
             query_ngrams = $querydata
                 .clone()
