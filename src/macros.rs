@@ -117,9 +117,24 @@ macro_rules! query {
                         for ct in 0..=*t {
                             let maybe_listings = $indexes[ct].get(sig);
                             if let Some(listings) = maybe_listings {
-                                for (cid, cpos) in listings.iter() {
-                                    if cpos.abs_diff(*sig_pos) <= *t {
+                                let mut skip = 0;
+                                let step = 4;
+                                for i in (0..listings.len()).step_by(step) {
+                                    if sig_pos.abs_diff(listings[i].1) <= *t {
+                                        let mut j = 1;
+                                        while sig_pos.abs_diff(listings[i.saturating_sub(j)].1) <= *t && j < step {
+                                            j += 1;
+                                        }
+                                        skip = i.saturating_sub(j - 1);
+                                        break;
+                                    }
+                                }
+
+                                for (cid, cpos) in listings.iter().skip(skip) {
+                                    if sig_pos.abs_diff(*cpos) <= *t {
                                         candidates.insert(*cid);
+                                    } else {
+                                        break;
                                     }
                                 }
                             }
@@ -238,7 +253,7 @@ macro_rules! filtering {
                 .par_iter()
                 .enumerate()
                 .map(|(i, t)| {
-                    let previous_t = *(tset_map.get(i.saturating_sub(1)).unwrap_or(&0)) + i;
+                    let previous_t = tset_map.get(i.saturating_sub(1)).unwrap_or(&0) + i;
                     let df = t.saturating_sub(previous_t) + 1;
                     let mut index: HashMap<i32, Vec<(usize, usize)>> = HashMap::default();
                     for (id, record) in true_filter_chunks.iter().enumerate() {
@@ -269,11 +284,11 @@ macro_rules! filtering {
             //     }
             // }
 
-            // indexes.par_iter_mut().for_each(|ivx| {
-            //     for listings in ivx.values_mut() {
-            //         listings.sort_by_key(|&(_, a)| a)
-            //     }
-            // });
+            indexes.par_iter_mut().for_each(|ivx| {
+                for listings in ivx.values_mut() {
+                    listings.sort_by_key(|&(_, a)| a)
+                }
+            });
             // dbg!(&indexes[0]);
             // println!("Building indexes took {}ms", start.elapsed().as_millis());
 
