@@ -223,7 +223,17 @@ macro_rules! filtering {
             // println!("Sorting for indexes took {}ms", start.elapsed().as_millis());
 
             // let tset_map = tset.clone();
-            // let mut partial_indexes: Vec<HashMap<i32, Vec<(usize, usize)>>> = tset
+            indexes.par_iter_mut().enumerate().for_each(|(ct, index)| {
+                for (id, record) in true_filter_chunks.iter().enumerate() {
+                    let (chunk, chunk_pos) = &record.chunks[ct];
+                    index
+                        .entry(*chunk)
+                        .and_modify(|listings| listings.push((id, *chunk_pos)))
+                        .or_insert(vec![(id, *chunk_pos)]);
+                }
+            });
+
+            // indexes: Vec<HashMap<i32, Vec<(usize, usize)>>> = tset
             //     .par_iter()
             //     .enumerate()
             //     .map(|(i, t)| {
@@ -241,22 +251,22 @@ macro_rules! filtering {
             //         return index;
             //     })
             //     .collect();
-            // println!("Building indexes took {}ms", start.elapsed().as_millis());
+            println!("Building indexes took {}ms", start.elapsed().as_millis());
 
             // for t in tset_map.iter() {
             //     indexes[*t] = partial_indexes.remove(0);
             // }
 
-            for (id, record) in true_filter_chunks.iter().enumerate() {
-                let mut t = 0;
-                for (chunk, chunk_pos) in record.chunks.iter().take(*max_threshold) {
-                    indexes[t]
-                        .entry(*chunk)
-                        .and_modify(|listings| listings.push((id, *chunk_pos)))
-                        .or_insert(vec![(id, *chunk_pos)]);
-                    t += 1;
-                }
-            }
+            // for (id, record) in true_filter_chunks.iter().enumerate() {
+            //     let mut t = 0;
+            //     for (chunk, chunk_pos) in record.chunks.iter().take(*max_threshold) {
+            //         indexes[t]
+            //             .entry(*chunk)
+            //             .and_modify(|listings| listings.push((id, *chunk_pos)))
+            //             .or_insert(vec![(id, *chunk_pos)]);
+            //         t += 1;
+            //     }
+            // }
 
             indexes.par_iter_mut().for_each(|ivx| {
                 for listings in ivx.values_mut() {

@@ -149,7 +149,7 @@ fn read<R: std::io::Read>(file: R) {
                 len_map.insert(last_len, i - j + 1);
             }
         }
-        sum = macros::filtering!(querydata, srchdata, len_map, Qgram, tset, true, true, 2);
+        sum = macros::filtering!(querydata, srchdata, len_map, Qgram, tset, false, true, 2);
     }
 
     println!("{sum}");
