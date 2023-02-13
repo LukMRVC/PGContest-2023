@@ -113,8 +113,8 @@ macro_rules! query {
                     let mut match_set: Vec<(i32, usize, usize)> = Vec::with_capacity(128);
 
                     let mut candidates: FxHashSet<usize> = FxHashSet::default();
-                    for ct in 0..=*t {
-                        for (sig, sig_pos) in querygrams.iter() {
+                    for (sig, sig_pos) in querygrams.iter() {
+                        for ct in 0..=*t {
                             let maybe_listings = $indexes[ct].get(sig);
                             if let Some(listings) = maybe_listings {
                                 for (cid, cpos) in listings.iter() {
