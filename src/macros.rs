@@ -238,11 +238,11 @@ macro_rules! filtering {
                 .par_iter()
                 .enumerate()
                 .map(|(i, t)| {
-                    let previous_t = tset_map.get(i.saturating_sub(1)).unwrap_or(&0);
-                    let df = t - previous_t + 1;
+                    let previous_t = *(tset_map.get(i.saturating_sub(1)).unwrap_or(&0)) + i;
+                    let df = t.saturating_sub(previous_t) + 1;
                     let mut index: HashMap<i32, Vec<(usize, usize)>> = HashMap::default();
                     for (id, record) in true_filter_chunks.iter().enumerate() {
-                        for (chunk, chunk_pos) in record.chunks.iter().skip(*previous_t).take(df) {
+                        for (chunk, chunk_pos) in record.chunks.iter().skip(previous_t).take(df) {
                             index
                                 .entry(*chunk)
                                 .and_modify(|listings| listings.push((id, *chunk_pos)))
