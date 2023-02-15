@@ -117,7 +117,7 @@ macro_rules! query {
                     let mut candidates: FxHashSet<usize> = FxHashSet::default();
                     for ct in 0..=*t {
                         let pref_sig_count = (((qwlen - ct) as f32 / n as f32).ceil()) as usize;
-                        let pref_querygram_len = qwlen - (pref_sig_count - ct) + 1;
+                        let pref_querygram_len = std::cmp::min(qwlen - (pref_sig_count - ct) + 1, querygrams.len() - 1);
                         let querygrams = &querygrams[..pref_querygram_len];
 
                         for (sig, sig_pos) in querygrams.iter() {
