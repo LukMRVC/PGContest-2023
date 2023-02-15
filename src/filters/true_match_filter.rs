@@ -82,7 +82,7 @@ pub struct TrueMatchFilter {
     lbstr: usize,
     pub chunks: Vec<(i32, usize)>,
     pub indexed_chunks: Vec<(i32, usize)>,
-    n: usize,
+    pub n: usize,
 }
 
 impl TrueMatchFilter {

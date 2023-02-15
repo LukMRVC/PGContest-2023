@@ -111,10 +111,16 @@ macro_rules! query {
                     let querygrams = query_ngram_list.unwrap();
                     let t2 = *t * 2;
                     let mut match_set: Vec<(i32, usize, usize)> = Vec::with_capacity(128);
+                    let n = $true_filter_chunks[0].n;
+
 
                     let mut candidates: FxHashSet<usize> = FxHashSet::default();
-                    for (sig, sig_pos) in querygrams.iter() {
-                        for ct in 0..=*t {
+                    for ct in 0..=*t {
+                        let pref_sig_count = (((qwlen - ct) as f32 / n as f32).ceil()) as usize;
+                        let pref_querygram_len = qwlen - (pref_sig_count - ct) + 1;
+                        let querygrams = &querygrams[..pref_querygram_len];
+
+                        for (sig, sig_pos) in querygrams.iter() {
                             let maybe_listings = $indexes[ct].get(sig);
                             if let Some(listings) = maybe_listings {
                                 let mut skip = 0;
@@ -253,7 +259,10 @@ macro_rules! filtering {
                 .par_iter()
                 .enumerate()
                 .map(|(i, t)| {
-                    let previous_t = tset_map.get(i.saturating_sub(1)).unwrap_or(&0) + i;
+                    let mut previous_t = 0;
+                    if i > 0 {
+                        previous_t = tset_map.get(i.saturating_sub(1)).unwrap_or(&0) + i;
+                    }
                     let df = t.saturating_sub(previous_t) + 1;
                     let mut index: HashMap<i32, Vec<(usize, usize)>> = HashMap::default();
                     for (id, record) in true_filter_chunks.iter().enumerate() {
