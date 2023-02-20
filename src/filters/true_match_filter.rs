@@ -20,6 +20,7 @@ const TRANSLATE_MAP: [i32; 256] = [
 ];
 
 const ALPHABET_SIZE: i32 = 64;
+const ALPHABET_POWERS: [i32; 5] = [1, 64, 64 * 64, 64 * 64 * 64, 64 * 64 * 64 * 64];
 
 fn nchunks(doc: &[u8], n: usize) -> Vec<(i32, usize)> {
     let total_chunks = (doc.len() + n - 1) / n;
@@ -35,11 +36,11 @@ fn nchunks(doc: &[u8], n: usize) -> Vec<(i32, usize)> {
         let padding = n - last_slice.len() - 1;
         let mut ranking = 0;
         for (i, c) in last_slice.iter().enumerate() {
-            ranking += TRANSLATE_MAP[*c as usize] * (ALPHABET_SIZE.pow((n - i - 1) as u32));
+            ranking += TRANSLATE_MAP[*c as usize] * ALPHABET_POWERS[n - i - 1]; //(ALPHABET_SIZE.pow((n - i - 1) as u32));
         }
 
         for i in (0..=padding).rev() {
-            ranking += TRANSLATE_MAP[b'$' as usize] * (ALPHABET_SIZE.pow(i as u32));
+            ranking += TRANSLATE_MAP[b'$' as usize] * ALPHABET_POWERS[i]; // (ALPHABET_SIZE.pow(i as u32));
         }
 
         chunks.push((ranking, (total_chunks - 1) * n));
@@ -57,8 +58,7 @@ pub fn ngrams(doc: &[u8], n: usize) -> Vec<(i32, usize)> {
     let mut last_ranking = rank(&doc[0..n], n);
     ngrams_vec.push((last_ranking, 0));
     for (i, ngram) in doc.windows(n).skip(1).enumerate() {
-        last_ranking = (last_ranking
-            - TRANSLATE_MAP[doc[i] as usize] * ALPHABET_SIZE.pow((n - 1) as u32))
+        last_ranking = (last_ranking - TRANSLATE_MAP[doc[i] as usize] * ALPHABET_POWERS[n - 1])
             * ALPHABET_SIZE
             + TRANSLATE_MAP[ngram[n - 1] as usize];
         ngrams_vec.push((last_ranking, i + 1));
@@ -73,7 +73,7 @@ pub fn ngrams(doc: &[u8], n: usize) -> Vec<(i32, usize)> {
 fn rank(slice: &[u8], n: usize) -> i32 {
     let mut sum = 0;
     for i in 1..=n {
-        sum += TRANSLATE_MAP[slice[i - 1] as usize] * (ALPHABET_SIZE.pow((n - i) as u32));
+        sum += TRANSLATE_MAP[slice[i - 1] as usize] * ALPHABET_POWERS[n - i]; // (ALPHABET_SIZE.pow((n - i) as u32));
     }
     sum
 }
